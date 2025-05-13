@@ -1,3 +1,5 @@
+# Work in progress....
+
 # Basic ESPNowEx - ESP-NOW Component for ESPHome
 
 This comprehensive guide describes the basic_espnowex component, which enables ESP-NOW communication in ESPHome projects. ESP-NOW is a lightweight, peer-to-peer communication protocol developed by Espressif that allows ESP devices to communicate directly without requiring a WiFi router.
