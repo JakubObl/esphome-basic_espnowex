@@ -3,6 +3,10 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_MAC_ADDRESS
 from esphome import automation
 
+# Dodanie definicji std_array, której brakuje w codegen
+std_array = cg.std_ns.class_("array")
+cg.std_array = std_array
+
 basic_espnowex_ns = cg.esphome_ns.namespace("espnow")
 BasicESPNowEx = basic_espnowex_ns.class_("BasicESPNowEx", cg.Component)
 OnMessageTrigger = basic_espnowex_ns.class_(
