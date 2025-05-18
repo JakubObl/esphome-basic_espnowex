@@ -42,24 +42,24 @@ async def to_code(config):
         mac_expr = cg.RawExpression(f"std::array<uint8_t, 6>{{{', '.join(map(str, mac_ints))}}}")
         cg.add(var.set_peer_mac(mac_expr))
     
-    cg.register_method(
-        var,
-        "send_espnow_cmd",
-        [
-            (cg.int16, "cmd"),
-            (cg.std_array.template(cg.uint8, 6), "mac")
-        ],
-        "void"
-    )
-    cg.register_method(
-        var,
-        "send_espnow_ex",
-        [
-            (cg.std_vector.template(cg.uint8), "message"),
-            (cg.std_array.template(cg.uint8, 6), "mac")
-        ],
-        "void"
-    )
+    #cg.register_method(
+    #    var,
+    #    "send_espnow_cmd",
+    #    [
+    #        (cg.int16, "cmd"),
+    #        (cg.std_array.template(cg.uint8, 6), "mac")
+    #    ],
+    #    "void"
+    #)
+    #cg.register_method(
+    #    var,
+    #    "send_espnow_ex",
+    #    [
+    #        (cg.std_vector.template(cg.uint8), "message"),
+    #        (cg.std_array.template(cg.uint8, 6), "mac")
+    #    ],
+    #    "void"
+    #)
 
     if CONF_ON_MESSAGE in config:
         for conf in config[CONF_ON_MESSAGE]:
