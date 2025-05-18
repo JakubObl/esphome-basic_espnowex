@@ -12,7 +12,7 @@ namespace espnow {
 
 class BasicESPNowEx;
 
-class OnMessageTrigger : public Trigger<std::string> {
+class OnMessageTrigger : public Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>> {
  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
 };
