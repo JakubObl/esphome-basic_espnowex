@@ -153,6 +153,7 @@ void BasicESPNowEx::handle_cmd(const std::array<uint8_t, 6> &mac, int16_t cmd) {
     for (auto *trig : this->cmd_triggers_) {
         trig->trigger(mac, cmd);
     }
+    this->on_recv_cmd_callback_.call(mac, cmd);
 }
 
 void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
