@@ -12,15 +12,15 @@ namespace espnow {
 
 class BasicESPNowEx;
 
-class OnMessageTrigger : public Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>> {
+class OnMessageTrigger : public automation::Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>> {
  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
 };
-class OnRecvAckTrigger : public Trigger<std::array<uint8_t, 6>> {
+class OnRecvAckTrigger : public automation::Trigger<std::array<uint8_t, 6>> {
 public:
     explicit OnRecvAckTrigger(BasicESPNowEx *parent);
 };
-class OnRecvCmdTrigger : public Trigger<std::array<uint8_t, 6>, int16_t> {
+class OnRecvCmdTrigger : public automation::Trigger<std::array<uint8_t, 6>, int16_t> {
 public:
     explicit OnRecvCmdTrigger(BasicESPNowEx *parent);
 };
