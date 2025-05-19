@@ -14,15 +14,15 @@ class BasicESPNowEx;
 
 class OnMessageTrigger : public ::esphome::Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>> {
  public:
-  explicit OnMessageTrigger(BasicESPNowEx *parent);
+  explicit OnMessageTrigger(BasicESPNowEx *parent) : ::esphome::Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>>(parent) {};
 };
 class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>> {
 public:
-    explicit OnRecvAckTrigger(BasicESPNowEx *parent);
+    explicit OnRecvAckTrigger(BasicESPNowEx *parent): ::esphome::Trigger<std::array<uint8_t, 6>>(parent) {};
 };
 class OnRecvCmdTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, int16_t> {
 public:
-    explicit OnRecvCmdTrigger(BasicESPNowEx *parent);
+    explicit OnRecvCmdTrigger(BasicESPNowEx *parent): ::esphome::Trigger<std::array<uint8_t, 6>, int16_t>(parent) {};
 };
 
 class BasicESPNowEx : public Component {
