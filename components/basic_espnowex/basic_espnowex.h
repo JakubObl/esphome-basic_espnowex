@@ -29,6 +29,10 @@ class BasicESPNowEx : public Component {
  public:
   void setup() override;
   void loop() override {}
+   // C++ subscription API:
+  void add_on_recv_cmd_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
+    this->on_recv_cmd_callback_.add(std::move(cb));
+  }
 
   void set_peer_mac(std::array<uint8_t, 6> mac);
   void send_broadcast(const std::string &message);
@@ -54,6 +58,8 @@ class BasicESPNowEx : public Component {
   std::vector<OnRecvAckTrigger *> ack_triggers_; 
   void handle_cmd(const std::array<uint8_t, 6> &mac, int16_t cmd);
   std::vector<OnRecvCmdTrigger *> cmd_triggers_;
+  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_recv_cmd_callback_;
+
 };
 
 }  // namespace espnow
