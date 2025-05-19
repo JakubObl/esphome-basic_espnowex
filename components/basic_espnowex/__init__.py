@@ -67,7 +67,7 @@ async def to_code(config):
 
     if CONF_ON_MESSAGE in config:
         for conf in config[CONF_ON_MESSAGE]:
-            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], OnMessageTrigger(var))
+            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], OnMessageTrigger,var)
             await automation.build_automation(
                 trigger, 
                 [
@@ -79,7 +79,7 @@ async def to_code(config):
             cg.add(var.add_on_message_trigger(trigger))
     if CONF_ON_RECV_ACK in config:
         for conf in config[CONF_ON_RECV_ACK]:
-            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], OnRecvAckTrigger(var))
+            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], OnRecvAckTrigger,var)
             await automation.build_automation(
                 trigger, 
                 [(cg.std_array.template(cg.uint8, 6), "mac")], 
@@ -88,7 +88,7 @@ async def to_code(config):
             cg.add(var.add_on_recv_ack_trigger(trigger))
     if CONF_ON_RECV_CMD in config:
         for conf in config[CONF_ON_RECV_CMD]:
-            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], OnRecvCmdTrigger(var))
+            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], OnRecvCmdTrigger,var)
             await automation.build_automation(
                 trigger, 
                 [
