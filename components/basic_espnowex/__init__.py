@@ -31,9 +31,9 @@ CONF_ON_RECV_CMD = "on_recv_cmd"
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(BasicESPNowEx),
     cv.Optional(CONF_PEER_MAC): cv.mac_address,
-    cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({cv.GenerateID(): cv.use_id(BasicESPNowEx)}),
-    cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({cv.GenerateID(): cv.use_id(BasicESPNowEx)}),
-    cv.Optional(CONF_ON_RECV_CMD): automation.validate_automation({cv.GenerateID(): cv.use_id(BasicESPNowEx)}),
+    cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({cv.GenerateID(): cv.declare_id(OnMessageTrigger)}),
+    cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({cv.GenerateID(): cv.declare_id(OnRecvAckTrigger)}),
+    cv.Optional(CONF_ON_RECV_CMD): automation.validate_automation({cv.GenerateID(): cv.declare_id(OnRecvCmdTrigger)}),
 }).extend(cv.COMPONENT_SCHEMA)
 
 async def to_code(config):
