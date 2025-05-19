@@ -130,6 +130,16 @@ void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
   parent->add_on_message_trigger(this);
 }
+
+OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
+    parent->add_on_recv_ack_trigger(this);
+}
+
+OnRecvCmdTrigger::OnRecvCmdTrigger(BasicESPNowEx *parent) {
+    parent->add_on_recv_cmd_trigger(this);
+}
+
+
 void BasicESPNowEx::handle_ack(const std::array<uint8_t, 6> &mac) {
     for (auto *trig : this->ack_triggers_) {
         trig->trigger(mac);
