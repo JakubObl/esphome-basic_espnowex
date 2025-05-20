@@ -71,7 +71,7 @@ async def to_code(config):
     if CONF_ON_MESSAGE in config:
         for conf in config[CONF_ON_MESSAGE]:
             trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], var)
-        #    await cg.register_component(trigger, conf)
+            await cg.register_component(trigger, conf)
             await automation.build_automation(
                 trigger, 
                 [
@@ -84,7 +84,7 @@ async def to_code(config):
     if CONF_ON_RECV_ACK in config:
         for conf in config[CONF_ON_RECV_ACK]:
             trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], var)
-         #   await cg.register_component(trigger, conf)
+            await cg.register_component(trigger, conf)
             await automation.build_automation(
                 trigger, 
                 [(cg.std_array.template(cg.uint8, 6), "mac")], 
