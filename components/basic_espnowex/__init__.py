@@ -92,7 +92,7 @@ async def to_code(config):
             )
             cg.add(var.add_on_recv_ack_trigger(trigger))
     if CONF_ON_RECV_CMD in config:
-        for conf in config[CONF_ON_RECV_CMD]:
+        for conf in config.get(CONF_ON_RECV_CMD, []):
             trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], var)
             await cg.register_component(trigger, conf)
             await automation.build_automation(
