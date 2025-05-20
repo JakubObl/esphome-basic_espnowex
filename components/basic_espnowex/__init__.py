@@ -11,16 +11,19 @@ basic_espnowex_ns = cg.esphome_ns.namespace("espnow")
 BasicESPNowEx = basic_espnowex_ns.class_("BasicESPNowEx", cg.Component)
 OnMessageTrigger = basic_espnowex_ns.class_(
     "OnMessageTrigger", 
-    automation.Trigger.template(cg.std_vector.template(cg.uint8), cg.std_array.template(cg.uint8, 6))
+    automation.Trigger.template(cg.std_vector.template(cg.uint8), cg.std_array.template(cg.uint8, 6)),
+    cg.Component,
 )
 
 OnRecvAckTrigger = basic_espnowex_ns.class_(
     "OnRecvAckTrigger", 
-    automation.Trigger.template(cg.std_array.template(cg.uint8, 6))
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6)),
+    cg.Component,
 )
 OnRecvCmdTrigger = basic_espnowex_ns.class_(
     "OnRecvCmdTrigger", 
-    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16)
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16),
+    cg.Component,
 )
 
 CONF_PEER_MAC = "peer_mac"
