@@ -128,21 +128,15 @@ void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
 }
 
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
-    parent->add_on_message_trigger([this](const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &mac) {
-    this->trigger(msg, mac); // Przekazanie parametrów do automatyzacji
-  });
+    parent->add_on_message_trigger(this);
 }
 
 OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
-    parent->add_on_recv_ack_trigger([this](const std::array<uint8_t, 6> &mac) {
-    this->trigger(mac); // Przekazanie parametrów do automatyzacji
-  });
+    parent->add_on_recv_ack_trigger(this);
 }
 
 OnRecvCmdTrigger::OnRecvCmdTrigger(BasicESPNowEx *parent) {
-    parent->add_on_recv_cmd_trigger([this](const std::array<uint8_t, 6> &mac, int16_t cmd) {
-    this->trigger(mac, cmd); // Przekazanie parametrów do automatyzacji
-  });
+    parent->add_on_recv_cmd_trigger(this);
 }
 
 
