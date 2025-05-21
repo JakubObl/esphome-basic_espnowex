@@ -12,17 +12,29 @@ namespace espnow {
 
 class BasicESPNowEx;
 
-class OnMessageTrigger : public ::esphome::Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>>, public Component {
+class OnMessageTrigger : public ::esphome::Trigger<const std::vector<uint8_t>, const std::array<uint8_t, 6>>, public Component {
  public:
-  explicit OnMessageTrigger(BasicESPNowEx *parent);
+  explicit OnMessageTrigger(BasicESPNowEx *parent){
+                parent->add_on_packet_data_callback([this](const std::vector<uint8_t> msg, const std::array<uint8_t, 6> mac) {
+                    trigger(msg, mac);
+                });
+            }
 };
-class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>>, public Component {
+class OnRecvAckTrigger : public ::esphome::Trigger<const std::array<uint8_t, 6>>, public Component {
 public:
-    explicit OnRecvAckTrigger(BasicESPNowEx *parent);
+    explicit OnRecvAckTrigger(BasicESPNowEx *parent){
+                parent->add_on_packet_data_callback([this](const std::array<uint8_t, 6> mac) {
+                    trigger(mac);
+                });
+            }
 };
-class OnRecvCmdTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, int16_t>, public Component {
+class OnRecvCmdTrigger : public ::esphome::Trigger<const std::array<uint8_t, 6>, const int16_t>, public Component {
 public:
-    explicit OnRecvCmdTrigger(BasicESPNowEx *parent);
+    explicit OnRecvCmdTrigger(BasicESPNowEx *parent){
+                parent->add_on_recv_cmd_callback(([this](const std::array<uint8_t, 6> mac, const int16_t cmd) {
+                    trigger(mac, cmd);
+                });
+            }
 };
 
 class BasicESPNowEx : public Component {
@@ -30,9 +42,20 @@ class BasicESPNowEx : public Component {
   void setup() override;
   void loop() override {}
    // C++ subscription API:
+   void add_on_message_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
+    this->on_message_callback_.add(std::move(cb));
+  }
+  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_message_callback_;
+
+  void add_on_recv_ack_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
+    this->on_recv_ack_callback_.add(std::move(cb));
+  }
+  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_recv_ack_callback_;
+
   void add_on_recv_cmd_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
     this->on_recv_cmd_callback_.add(std::move(cb));
   }
+  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_recv_cmd_callback_;
 
   void set_peer_mac(std::array<uint8_t, 6> mac);
   void send_broadcast(const std::string &message);
@@ -58,7 +81,7 @@ class BasicESPNowEx : public Component {
   std::vector<OnRecvAckTrigger *> ack_triggers_; 
   void handle_cmd(const std::array<uint8_t, 6> &mac, int16_t cmd);
   std::vector<OnRecvCmdTrigger *> cmd_triggers_;
-  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_recv_cmd_callback_;
+  
 
 };
 
