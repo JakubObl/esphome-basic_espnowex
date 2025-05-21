@@ -15,8 +15,8 @@ class BasicESPNowEx;
 class OnMessageTrigger : public ::esphome::Trigger<const std::vector<uint8_t>, const std::array<uint8_t, 6>>, public Component {
  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent){
-                parent->add_on_packet_data_callback([this](const std::vector<uint8_t> msg, const std::array<uint8_t, 6> mac) {
-                    trigger(msg, mac);
+                parent->add_on_packet_data_callback([this](const std::vector<uint8_t> message, const std::array<uint8_t, 6> mac) {
+                    trigger(message, mac);
                 });
             }
 };
