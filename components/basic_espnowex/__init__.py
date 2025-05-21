@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID, CONF_MAC_ADDRESS
+from esphome.const import CONF_ID, CONF_MAC_ADDRESS, CONF_TRIGGER_ID
 from esphome import automation
 
 # Dodanie definicji std_array, której brakuje w codegen
@@ -34,9 +34,9 @@ CONF_ON_RECV_CMD = "on_recv_cmd"
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(BasicESPNowEx),
     cv.Optional(CONF_PEER_MAC): cv.mac_address,
-    cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({cv.GenerateID(): cv.declare_id(OnMessageTrigger)}),
-    cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({cv.GenerateID(): cv.declare_id(OnRecvAckTrigger)}),
-    cv.Optional(CONF_ON_RECV_CMD): automation.validate_automation({cv.GenerateID(): cv.declare_id(OnRecvCmdTrigger)}),
+    cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnMessageTrigger)}),
+    cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvAckTrigger)}),
+    cv.Optional(CONF_ON_RECV_CMD): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvCmdTrigger)}),
 }).extend(cv.COMPONENT_SCHEMA)
 
 async def to_code(config):
@@ -70,7 +70,7 @@ async def to_code(config):
 
     if CONF_ON_MESSAGE in config:
         for conf in config[CONF_ON_MESSAGE]:
-            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], var)
+            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
           #  await cg.register_component(trigger, conf)
             await automation.build_automation(
                 trigger, 
@@ -78,22 +78,22 @@ async def to_code(config):
                     (cg.std_vector.template(cg.uint8), "message"),
                     (cg.std_array.template(cg.uint8, 6), "mac")
                 ], 
-                conf
+                conf,
             )
             cg.add(var.add_on_message_trigger(trigger))
     if CONF_ON_RECV_ACK in config:
         for conf in config[CONF_ON_RECV_ACK]:
-            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], var)
+            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
           #  await cg.register_component(trigger, conf)
             await automation.build_automation(
                 trigger, 
                 [(cg.std_array.template(cg.uint8, 6), "mac")], 
-                conf
+                conf,
             )
             cg.add(var.add_on_recv_ack_trigger(trigger))
     if CONF_ON_RECV_CMD in config:
         for conf in config.get(CONF_ON_RECV_CMD, []):
-            trigger = cg.new_Pvariable(conf[automation.CONF_TRIGGER_ID], var)
+            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
            # await cg.register_component(trigger, conf)
             await automation.build_automation(
                 trigger, 
@@ -101,7 +101,7 @@ async def to_code(config):
                     (cg.std_array.template(cg.uint8, 6), "mac"),
                     (cg.int16, "cmd")
                 ], 
-                conf
+                conf,
             )
             cg.add(var.add_on_recv_cmd_trigger(trigger))
 
