@@ -128,17 +128,22 @@ void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
 }
 
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
-    parent->add_on_message_trigger(this);
+     parent->add_on_message_callback([this](const std::vector<uint8_t> message, const std::array<uint8_t, 6> mac) {
+          trigger(message, mac);
+      });
 }
 
 OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
-    parent->add_on_recv_ack_trigger(this);
+    parent->add_on_recv_ack_callback([this](const std::array<uint8_t, 6> mac) {
+         trigger(mac);
+    });
 }
 
 OnRecvCmdTrigger::OnRecvCmdTrigger(BasicESPNowEx *parent) {
-    parent->add_on_recv_cmd_trigger(this);
+    parent->add_on_recv_cmd_callback([this](const std::array<uint8_t, 6> mac, const int16_t cmd) {
+        trigger(mac, cmd);
+    });
 }
-
 
 void BasicESPNowEx::handle_ack(const std::array<uint8_t, 6> &mac) {
     for (auto *trig : this->ack_triggers_) {
