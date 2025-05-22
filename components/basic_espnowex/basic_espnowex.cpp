@@ -8,6 +8,32 @@ namespace espnow {
 
 BasicESPNowEx *BasicESPNowEx::instance_ = nullptr;
 
+
+class OnMessageTrigger : public ::esphome::Trigger<const std::vector<uint8_t>, const std::array<uint8_t, 6>>, public Component {
+ public:
+  explicit OnMessageTrigger(BasicESPNowEx *parent){
+                parent->add_on_message_callback([this](const std::vector<uint8_t> message, const std::array<uint8_t, 6> mac) {
+                    trigger(message, mac);
+                });
+            }
+};
+class OnRecvAckTrigger : public ::esphome::Trigger<const std::array<uint8_t, 6>>, public Component {
+public:
+    explicit OnRecvAckTrigger(BasicESPNowEx *parent){
+                parent->add_on_recv_ack_callback([this](const std::array<uint8_t, 6> mac) {
+                    trigger(mac);
+                });
+            }
+};
+class OnRecvCmdTrigger : public ::esphome::Trigger<const std::array<uint8_t, 6>, const int16_t>, public Component {
+public:
+    explicit OnRecvCmdTrigger(BasicESPNowEx *parent){
+                parent->add_on_recv_cmd_callback([this](const std::array<uint8_t, 6> mac, const int16_t cmd) {
+                    trigger(mac, cmd);
+                });
+            }
+};
+
 void BasicESPNowEx::setup() {
   esp_netif_init();
   esp_event_loop_create_default();
