@@ -44,7 +44,7 @@ class BasicESPNowEx : public Component {
   void add_on_recv_cmd_callback(std::function<void(std::array<uint8_t,6>, int16_t)> &&cb) {
     this->on_recv_cmd_callback_.add(std::move(cb));
   }
-  CallbackManager<void(std::array<uint8_t,6>&, int16_t)> on_recv_cmd_callback_;
+  CallbackManager<void(std::array<uint8_t,6>, int16_t)> on_recv_cmd_callback_;
 
   void set_peer_mac(std::array<uint8_t, 6> mac);
   void send_broadcast(const std::string &message);
@@ -60,15 +60,15 @@ class BasicESPNowEx : public Component {
  protected:
   static void recv_cb(const uint8_t *mac, const uint8_t *data, int len);
   static void send_cb(const uint8_t *mac, esp_now_send_status_t status);
-  void handle_received(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &mac);
+  void handle_received(std::vector<uint8_t> &msg, std::array<uint8_t, 6> &mac);
 
   std::array<uint8_t, 6> peer_mac_{{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
   static BasicESPNowEx *instance_;
   std::vector<OnMessageTrigger *> triggers_;
 
-  void handle_ack(const std::array<uint8_t, 6> &mac);
+  void handle_ack(std::array<uint8_t, 6> &mac);
   std::vector<OnRecvAckTrigger *> ack_triggers_; 
-  void handle_cmd(const std::array<uint8_t, 6> &mac, int16_t cmd);
+  void handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd);
   std::vector<OnRecvCmdTrigger *> cmd_triggers_;
   
 
