@@ -17,15 +17,15 @@ class BasicESPNowEx : public Component {
   void setup() override;
   void loop() override {}
    // C++ subscription API:
-   void add_on_message_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
+   void add_on_message_callback(std::function<void(const std::vector<uint8_t>, const std::array<uint8_t,6>&)> &&cb) {
     this->on_message_callback_.add(std::move(cb));
   }
-  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_message_callback_;
+  CallbackManager<void(const std::vector<uint8_t>, const std::array<uint8_t,6>&)> on_message_callback_;
 
-  void add_on_recv_ack_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
+  void add_on_recv_ack_callback(std::function<void(const std::array<uint8_t,6>&)> &&cb) {
     this->on_recv_ack_callback_.add(std::move(cb));
   }
-  CallbackManager<void(const std::array<uint8_t,6>&, int16_t)> on_recv_ack_callback_;
+  CallbackManager<void(const std::array<uint8_t,6>&)> on_recv_ack_callback_;
 
   void add_on_recv_cmd_callback(std::function<void(const std::array<uint8_t,6>&, int16_t)> &&cb) {
     this->on_recv_cmd_callback_.add(std::move(cb));
