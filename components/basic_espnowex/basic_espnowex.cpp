@@ -9,14 +9,25 @@ namespace espnow {
 BasicESPNowEx *BasicESPNowEx::instance_ = nullptr;
 
 void BasicESPNowEx::setup() {
-  esp_netif_init();
-  esp_event_loop_create_default();
-  esp_netif_create_default_wifi_sta();
+  //esp_netif_init();
+  //esp_event_loop_create_default();
+  //esp_netif_create_default_wifi_sta();
 
+  //wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  //esp_wifi_init(&cfg);
+  //esp_wifi_set_mode(WIFI_MODE_STA);
+  //esp_wifi_start();
+
+  // Sprawdzić czy WiFi jest już zainicjalizowane
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  esp_wifi_init(&cfg);
-  esp_wifi_set_mode(WIFI_MODE_STA);
-  esp_wifi_start();
+  esp_err_t err = esp_wifi_init(&cfg);
+  if (err == ESP_ERR_WIFI_INIT_STATE) {
+    // WiFi już zainicjalizowane - to normalne w ESPHome
+    ESP_LOGD("basic_espnowex", "WiFi already initialized");
+  } else if (err != ESP_OK) {
+    ESP_LOGE("basic_espnowex", "WiFi init failed: %s", esp_err_to_name(err));
+    return;
+  }
 
   esp_now_init();
   esp_now_register_recv_cb(&BasicESPNowEx::recv_cb);
