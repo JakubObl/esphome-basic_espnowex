@@ -8,6 +8,12 @@ namespace espnow {
 
 BasicESPNowEx *BasicESPNowEx::instance_ = nullptr;
 
+// deklaracja funkcji pomocniczej
+static void static_wifi_event(void* arg, esp_event_base_t eb, int32_t id, void* data) {
+  // arg to wskaźnik na instancję BasicESPNowEx
+  static_cast<esphome::espnow::BasicESPNowEx*>(arg)->on_wifi_event(id);
+}
+
 void BasicESPNowEx::setup() {
   //esp_netif_init();
   //esp_event_loop_create_default();
@@ -17,7 +23,14 @@ void BasicESPNowEx::setup() {
   //esp_wifi_init(&cfg);
   //esp_wifi_set_mode(WIFI_MODE_STA);
   //esp_wifi_start();
-
+  
+   ESP_ERROR_CHECK(esp_event_handler_register(
+    WIFI_EVENT,                   // baza zdarzeń Wi-Fi
+    WIFI_EVENT_STA_CONNECTED,     // identyfikator zdarzenia
+    &static_wifi_event,           // wskaźnik na statyczną funkcję
+    this                          // jako arg przekaż instancję
+  ));
+	
   // Sprawdzić czy WiFi jest już zainicjalizowane
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_err_t err = esp_wifi_init(&cfg);
@@ -29,6 +42,10 @@ void BasicESPNowEx::setup() {
     return;
   }
 
+  uint8_t wifi_channel;
+  esp_wifi_get_channel(&wifi_channel, nullptr);
+  esp_wifi_set_channel(wifi_channel, WIFI_SECOND_CHAN_NONE);
+	
   esp_now_init();
   esp_now_register_recv_cb(&BasicESPNowEx::recv_cb);
   esp_now_register_send_cb(&BasicESPNowEx::send_cb);
@@ -37,7 +54,7 @@ void BasicESPNowEx::setup() {
 
   esp_now_peer_info_t peer{};
   memcpy(peer.peer_addr, this->peer_mac_.data(), 6);
-  peer.channel = 0;
+  peer.channel = wifi_channel;
   peer.encrypt = false;
 
   if (!esp_now_is_peer_exist(peer.peer_addr)) {
@@ -45,6 +62,20 @@ void BasicESPNowEx::setup() {
   }
 
   ESP_LOGI("basic_espnowex", "ESP-NOW initialized");
+}
+
+void BasicESPNowEx::on_wifi_event(WiFiEvent_t event) {
+  if (event == SYSTEM_EVENT_STA_CONNECTED) {
+    uint8_t new_channel;
+    esp_wifi_get_channel(&new_channel, nullptr);
+    
+    esp_now_peer_info_t peer;
+    if (esp_now_get_peer(this->peer_mac_.data(), &peer) == ESP_OK) {
+      peer.channel = new_channel;
+      esp_now_mod_peer(&peer);
+      ESP_LOGI("espnow", "Zaktualizowano kanał peera na %d", new_channel);
+    }
+  }
 }
 
 void BasicESPNowEx::send_broadcast(const std::string &message) {
