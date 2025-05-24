@@ -9,9 +9,9 @@ namespace espnow {
 BasicESPNowEx *BasicESPNowEx::instance_ = nullptr;
 
 // deklaracja funkcji pomocniczej
-static void static_wifi_event(void* arg, esp_event_base_t eb, int32_t id, void* data) {
-  // arg to wskaźnik na instancję BasicESPNowEx
-  static_cast<esphome::espnow::BasicESPNowEx*>(arg)->on_wifi_event(id);
+void BasicESPNowEx::static_wifi_event(void* arg, esp_event_base_t base, int32_t id, void* data) {
+  // przekaż dalej do instancji
+  static_cast<BasicESPNowEx*>(arg)->on_wifi_event(base, id, data);
 }
 
 void BasicESPNowEx::setup() {
@@ -24,12 +24,9 @@ void BasicESPNowEx::setup() {
   //esp_wifi_set_mode(WIFI_MODE_STA);
   //esp_wifi_start();
   
-   ESP_ERROR_CHECK(esp_event_handler_register(
-    WIFI_EVENT,                   // baza zdarzeń Wi-Fi
-    WIFI_EVENT_STA_CONNECTED,     // identyfikator zdarzenia
-    &static_wifi_event,           // wskaźnik na statyczną funkcję
-    this                          // jako arg przekaż instancję
-  ));
+  esp_event_handler_instance_register(
+    WIFI_EVENT, WIFI_EVENT_STA_CONNECTED,
+    &BasicESPNowEx::static_wifi_event, this, nullptr);
 	
   // Sprawdzić czy WiFi jest już zainicjalizowane
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -64,16 +61,15 @@ void BasicESPNowEx::setup() {
   ESP_LOGI("basic_espnowex", "ESP-NOW initialized");
 }
 
-void BasicESPNowEx::on_wifi_event(WiFiEvent_t event) {
-  if (event == SYSTEM_EVENT_STA_CONNECTED) {
-    uint8_t new_channel;
-    esp_wifi_get_channel(&new_channel, nullptr);
-    
+void BasicESPNowEx::on_wifi_event(esp_event_base_t base, int32_t id, void* data) {
+  if (base == WIFI_EVENT && id == WIFI_EVENT_STA_CONNECTED) {
+    uint8_t new_ch; 
+    esp_wifi_get_channel(&new_ch, nullptr);
     esp_now_peer_info_t peer;
     if (esp_now_get_peer(this->peer_mac_.data(), &peer) == ESP_OK) {
-      peer.channel = new_channel;
+      peer.channel = new_ch;
       esp_now_mod_peer(&peer);
-      ESP_LOGI("espnow", "Zaktualizowano kanał peera na %d", new_channel);
+      ESP_LOGI("basic_espnowex", "Kanał peera zaktualizowany na %d", new_ch);
     }
   }
 }
