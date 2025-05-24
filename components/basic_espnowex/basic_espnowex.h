@@ -30,6 +30,9 @@ class BasicESPNowEx : public Component {
  public:
   void setup() override;
   void loop() override {}
+
+  void on_wifi_event(esp_event_base_t base, int32_t id, void* data);
+     
    // C++ subscription API:
    void add_on_message_callback(std::function<void(std::vector<uint8_t>, std::array<uint8_t,6>)> &&cb) {
     this->on_message_callback_.add(std::move(cb));
@@ -58,6 +61,7 @@ class BasicESPNowEx : public Component {
   void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
 
  protected:
+  static void static_wifi_event(void* arg, esp_event_base_t base, int32_t id, void* data);
   static void recv_cb(const uint8_t *mac, const uint8_t *data, int len);
   static void send_cb(const uint8_t *mac, esp_now_send_status_t status);
   void handle_received(std::vector<uint8_t> &msg, std::array<uint8_t, 6> &mac);
