@@ -2,6 +2,8 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "freertos/semphr.h"
+#include <functional>
 
 namespace esphome {
 namespace espnow {
@@ -57,7 +59,10 @@ void BasicESPNowEx::setup() {
   if (!esp_now_is_peer_exist(peer.peer_addr)) {
     esp_now_add_peer(&peer);
   }
-
+	
+  // 1) Utwórz semafor
+  this->queue_mutex_ = xSemaphoreCreateMutex();
+	
   // Konfiguracja timera do okresowej weryfikacji kolejki
   const esp_timer_create_args_t timer_args = {
     .callback = [](void* arg) {
@@ -136,16 +141,19 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
 }
 
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
-  std::lock_guard<std::mutex> lock(queue_mutex_);
   
-  PendingMessage pending;
-  pending.mac = peer_mac;
-  pending.retry_count = 0;
-  pending.timestamp = esp_timer_get_time();
-  pending.acked = false;
-  pending.payload = msg;
+  if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
   
-  pending_messages_.push_back(pending);
+	  PendingMessage pending;
+	  pending.mac = peer_mac;
+	  pending.retry_count = 0;
+	  pending.timestamp = esp_timer_get_time();
+	  pending.acked = false;
+	  pending.payload = msg;
+  
+  	pending_messages_.push_back(pending);
+    	xSemaphoreGive(this->queue_mutex_);
+  }
   process_send_queue();
 }
 
@@ -154,25 +162,28 @@ void BasicESPNowEx::process_send_queue() {
   constexpr int64_t timeout_us = 200 * 1000; // 200ms
   constexpr uint8_t max_retries = 5;
 
-  // Usuń potwierdzone lub przekroczone limity czasu
-  pending_messages_.erase(
-    std::remove_if(pending_messages_.begin(), pending_messages_.end(),
-      [now, timeout_us, max_retries](const PendingMessage& m) {
-        return m.acked || ((now - m.timestamp) > timeout_us && m.retry_count >= max_retries);
-      }),
-    pending_messages_.end());
-
-  for (auto& msg : pending_messages_) {
-    if (!msg.acked && (now - msg.timestamp) > timeout_us && msg.retry_count < max_retries) {
-      esp_err_t result = esp_now_send(msg.mac.data(), msg.payload.data(), msg.payload.size());
-      if (result == ESP_OK) {
-        msg.retry_count++;
-        msg.timestamp = now;
-        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, attempt %d",
-                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.retry_count);
-      }
-    }
-  }
+  // Lock
+  if (xSemaphoreTake(this->queue_mutex_, 0) == pdTRUE) {
+	  // Usuń potwierdzone lub przekroczone limity czasu
+	  this->pending_messages_.erase(
+	    std::remove_if(this->pending_messages_.begin(), this->pending_messages_.end(),
+	      [now, timeout_us, max_retries](const PendingMessage& m) {
+	        return m.acked || ((now - m.timestamp) > timeout_us && m.retry_count >= max_retries);
+	      }),
+	    this->pending_messages_.end());
+	
+	  for (auto& msg : this->pending_messages_) {
+	    if (!msg.acked && (now - msg.timestamp) > timeout_us && msg.retry_count < max_retries) {
+	      esp_err_t result = esp_now_send(msg.mac.data(), msg.payload.data(), msg.payload.size());
+	      if (result == ESP_OK) {
+	        msg.retry_count++;
+	        msg.timestamp = now;
+	        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, attempt %d",
+	                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.retry_count);
+	      }
+	    }
+	  }
+	  xSemaphoreGive(this->queue_mutex_);
 }
 
 /*
@@ -213,13 +224,15 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 		//	instance_->handle_ack(mac_array);
 		//	return; }
      if (len == 4 && memcmp(data, "\x00\x01\x00\x01", 4) == 0) {
-      std::lock_guard<std::mutex> lock(instance_->queue_mutex_);
-      for (auto& msg : instance_->pending_messages_) {
-        if (memcmp(msg.mac.data(), mac_array.data(), 6) == 0) {
-          msg.acked = true;
-          ESP_LOGD("basic_espnowex", "Otrzymano ACK od %02X:%02X:%02X:%02X:%02X:%02X",
-                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-        }
+      if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+	      for (auto& msg : instance_->pending_messages_) {
+	        if (memcmp(msg.mac.data(), mac_array.data(), 6) == 0) {
+	          msg.acked = true;
+	          ESP_LOGD("basic_espnowex", "Otrzymano ACK od %02X:%02X:%02X:%02X:%02X:%02X",
+	                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	        }
+	      }
+	      xSemaphoreGive(instance_->queue_mutex_);     
       }
       return;
     }
@@ -296,6 +309,8 @@ void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
 BasicESPNowEx::~BasicESPNowEx() {
   esp_timer_stop(this->retry_timer_);
   esp_timer_delete(this->retry_timer_);
+  // Usuń semafor
+  vSemaphoreDelete(this->queue_mutex_);
 }
 
 }  // namespace espnow
