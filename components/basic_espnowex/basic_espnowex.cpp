@@ -180,10 +180,11 @@ void BasicESPNowEx::process_send_queue() {
 	        msg.timestamp = now;
 	        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, attempt %d",
 	                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.retry_count);
+	        }
 	      }
 	    }
-	  }
 	  xSemaphoreGive(this->queue_mutex_);
+  }
 }
 
 /*
