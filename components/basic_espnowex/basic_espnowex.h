@@ -6,9 +6,18 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <chrono>
 
 namespace esphome {
 namespace espnow {
+
+struct PendingMessage {
+  std::array<uint8_t, 6> mac;
+  uint8_t retry_count;
+  int64_t timestamp;
+  bool acked;
+  std::vector<uint8_t> payload;
+};
 
 class BasicESPNowEx;
 
