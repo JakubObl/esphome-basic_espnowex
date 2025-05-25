@@ -3,10 +3,17 @@
 #include "esphome/core/component.h"
 #include "esphome/core/automation.h"
 #include "esp_now.h"
+#include "esp_timer.h"
+
+// FreeRTOS
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
 #include <array>
 #include <vector>
 #include <string>
 #include <chrono>
+#include <algorithm>
 
 namespace esphome {
 namespace espnow {
@@ -70,11 +77,12 @@ class BasicESPNowEx : public Component {
   void add_on_message_trigger(OnMessageTrigger *trigger);
   void add_on_recv_ack_trigger(OnRecvAckTrigger *trigger);
   void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
+  ~BasicESPNowEx() override;
 
  protected:
-  void BasicESPNowEx::process_send_queue();
+  void process_send_queue();
   std::vector<PendingMessage> pending_messages_;
-  std::mutex queue_mutex_;
+  SemaphoreHandle_t queue_mutex_;;
   esp_timer_handle_t retry_timer_;
   static void static_wifi_event(void* arg, esp_event_base_t base, int32_t id, void* data);
   static void recv_cb(const uint8_t *mac, const uint8_t *data, int len);
