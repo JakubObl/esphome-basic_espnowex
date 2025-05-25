@@ -74,17 +74,34 @@ void BasicESPNowEx::on_wifi_event(esp_event_base_t base, int32_t id, void* data)
   }
 }
 
-void BasicESPNowEx::send_broadcast(const std::string &message) {
+void BasicESPNowEx::send_broadcast(const std::vector<uint8_t> &msg) {
   uint8_t broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  esp_now_send(broadcast, (const uint8_t *)message.data(), message.size());
+  esp_err_t result = esp_now_send(broadcast, msg.data(), msg.size());
+  if (result != ESP_OK) {
+      ESP_LOGE("basic_espnowex", "Send broadcast error: %s", esp_err_to_name(result));
+  }
+	
+}
+void BasicESPNowEx::send_broadcast_str(const std::string &message) {
+  uint8_t broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  esp_err_t result = esp_now_send(broadcast, (const uint8_t *)message.data(), message.size());
+  if (result != ESP_OK) {
+      ESP_LOGE("basic_espnowex", "Send broadcast str error: %s", esp_err_to_name(result));
+  }
 }
 
-void BasicESPNowEx::send_to_peer(const std::string &message) {
-  esp_now_send(this->peer_mac_.data(), (const uint8_t *)message.data(), message.size());
+void BasicESPNowEx::send_to_peer(const std::vector<uint8_t> &msg) {
+  this->send_espnow(msg, this->peer_mac_);
 }
 
-void BasicESPNowEx::send_espnow(std::string message) {
-  this->send_to_peer(message);  // callable from YAML lambdas
+void BasicESPNowEx::send_to_peer_str(const std::string &message) {
+  std::vector<uint8_t> msg(message.begin(), message.end());
+  this->send_espnow(msg, this->peer_mac_);
+}
+
+void BasicESPNowEx::send_espnow_str(std::string message, const std::array<uint8_t, 6> &peer_mac) {
+  std::vector<uint8_t> msg(message.begin(), message.end());
+  this->send_espnow(msg, peer_mac);
 }
 void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &peer_mac) {
     std::vector<uint8_t> msg(4);
@@ -92,12 +109,10 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
     msg[1] = static_cast<uint8_t>((cmd >> 8) & 0xFF);
     msg[2] = msg[0];
     msg[3] = msg[1];
-
-
-    this->send_espnow_ex(msg, peer_mac);
+    this->send_espnow(msg, peer_mac);
 }
 
-void BasicESPNowEx::send_espnow_ex(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac) {
+void BasicESPNowEx::send_espnow(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac) {
 
     if (!esp_now_is_peer_exist(peer_mac.data())) {
         esp_now_peer_info_t peer_info{};
@@ -136,7 +151,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 
         if (len == 4) {
             std::vector<uint8_t> ack = {0x00, 0x01, 0x00, 0x01};
-            instance_->send_espnow_ex(ack, mac_array);
+            instance_->send_espnow(ack, mac_array);
         }
 		if (len == 4 && memcmp(data, data + 2, 2) == 0) {
 			int16_t cmd;
