@@ -77,7 +77,7 @@ class BasicESPNowEx : public Component {
   void add_on_message_trigger(OnMessageTrigger *trigger);
   void add_on_recv_ack_trigger(OnRecvAckTrigger *trigger);
   void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
-  ~BasicESPNowEx() override;
+  ~BasicESPNowEx();
 
  protected:
   void process_send_queue();
