@@ -72,6 +72,7 @@ class BasicESPNowEx : public Component {
   void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
 
  protected:
+  void BasicESPNowEx::process_send_queue();
   std::vector<PendingMessage> pending_messages_;
   std::mutex queue_mutex_;
   esp_timer_handle_t retry_timer_;
