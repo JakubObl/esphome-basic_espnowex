@@ -72,6 +72,9 @@ class BasicESPNowEx : public Component {
   void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
 
  protected:
+  std::vector<PendingMessage> pending_messages_;
+  std::mutex queue_mutex_;
+  esp_timer_handle_t retry_timer_;
   static void static_wifi_event(void* arg, esp_event_base_t base, int32_t id, void* data);
   static void recv_cb(const uint8_t *mac, const uint8_t *data, int len);
   static void send_cb(const uint8_t *mac, esp_now_send_status_t status);
