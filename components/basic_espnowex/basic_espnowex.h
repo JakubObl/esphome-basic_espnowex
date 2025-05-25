@@ -59,10 +59,12 @@ class BasicESPNowEx : public Component {
   CallbackManager<void(std::array<uint8_t,6>, int16_t)> on_recv_cmd_callback_;
 
   void set_peer_mac(std::array<uint8_t, 6> mac);
-  void send_broadcast(const std::string &message);
-  void send_to_peer(const std::string &message);
-  void send_espnow(std::string message);  // for YAML lambda
-  void send_espnow_ex(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac);
+  void send_broadcast(const std::vector<uint8_t> &msg);
+  void send_broadcast_str(const std::string &message);
+  void send_to_peer(const std::vector<uint8_t> &msg);
+  void send_to_peer_str(const std::string &message);
+  void send_espnow_str(std::string message, const std::array<uint8_t, 6> &peer_mac);
+  void send_espnow(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac);
   void send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &peer_mac);
 
   void add_on_message_trigger(OnMessageTrigger *trigger);
