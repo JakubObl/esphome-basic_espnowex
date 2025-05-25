@@ -58,6 +58,18 @@ void BasicESPNowEx::setup() {
     esp_now_add_peer(&peer);
   }
 
+  // Konfiguracja timera do okresowej weryfikacji kolejki
+  const esp_timer_create_args_t timer_args = {
+    .callback = [](void* arg) {
+      static_cast<BasicESPNowEx*>(arg)->process_send_queue();
+    },
+    .arg = this,
+    .name = "espnow_retry_timer"
+  };
+  
+  ESP_ERROR_CHECK(esp_timer_create(&timer_args, &this->retry_timer_));
+  ESP_ERROR_CHECK(esp_timer_start_periodic(this->retry_timer_, 100000)); // 100ms
+
   ESP_LOGI("basic_espnowex", "ESP-NOW initialized");
 }
 
@@ -65,11 +77,22 @@ void BasicESPNowEx::on_wifi_event(esp_event_base_t base, int32_t id, void* data)
   if (base == WIFI_EVENT && id == WIFI_EVENT_STA_CONNECTED) {
     uint8_t new_ch; 
     esp_wifi_get_channel(&new_ch, nullptr);
-    esp_now_peer_info_t peer;
-    if (esp_now_get_peer(this->peer_mac_.data(), &peer) == ESP_OK) {
-      peer.channel = new_ch;
-      esp_now_mod_peer(&peer);
-      ESP_LOGI("basic_espnowex", "Kanał peera zaktualizowany na %d", new_ch);
+
+    //std::lock_guard<std::mutex> lock(peer_mutex_);
+	  
+    esp_now_deinit();
+    esp_now_init();
+    esp_now_register_recv_cb(&BasicESPNowEx::recv_cb);
+    esp_now_register_send_cb(&BasicESPNowEx::send_cb);
+  
+    // Ponowna inicjalizacja peerów
+    esp_now_peer_info_t peer{};
+    memcpy(peer.peer_addr, this->peer_mac_.data(), 6);
+    peer.channel = 0; // Kanał będzie aktualizowany dynamicznie
+    peer.encrypt = false;
+  
+    if (!esp_now_is_peer_exist(peer.peer_addr)) {
+      esp_now_add_peer(&peer);
     }
   }
 }
@@ -112,6 +135,47 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
     this->send_espnow(msg, peer_mac);
 }
 
+void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
+  std::lock_guard<std::mutex> lock(queue_mutex_);
+  
+  PendingMessage pending;
+  pending.mac = peer_mac;
+  pending.retry_count = 0;
+  pending.timestamp = esp_timer_get_time();
+  pending.acked = false;
+  pending.payload = msg;
+  
+  pending_messages_.push_back(pending);
+  process_send_queue();
+}
+
+void BasicESPNowEx::process_send_queue() {
+  const int64_t now = esp_timer_get_time();
+  constexpr int64_t timeout_us = 200 * 1000; // 200ms
+  constexpr uint8_t max_retries = 5;
+
+  // Usuń potwierdzone lub przekroczone limity czasu
+  pending_messages_.erase(
+    std::remove_if(pending_messages_.begin(), pending_messages_.end(),
+      [now, timeout_us, max_retries](const PendingMessage& m) {
+        return m.acked || ((now - m.timestamp) > timeout_us && m.retry_count >= max_retries);
+      }),
+    pending_messages_.end());
+
+  for (auto& msg : pending_messages_) {
+    if (!msg.acked && (now - msg.timestamp) > timeout_us && msg.retry_count < max_retries) {
+      esp_err_t result = esp_now_send(msg.mac.data(), msg.payload.data(), msg.payload.size());
+      if (result == ESP_OK) {
+        msg.retry_count++;
+        msg.timestamp = now;
+        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, attempt %d",
+                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.retry_count);
+      }
+    }
+  }
+}
+
+/*
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac) {
 
     if (!esp_now_is_peer_exist(peer_mac.data())) {
@@ -133,6 +197,7 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t> &msg, const std::arra
         ESP_LOGE("basic_espnowex", "Send error: %s", esp_err_to_name(result));
     }
 }
+*/
 
 void BasicESPNowEx::set_peer_mac(std::array<uint8_t, 6> mac) {
   this->peer_mac_ = mac;
@@ -144,10 +209,20 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 		std::copy_n(mac, 6, mac_array.begin());
 		
 
-		if (len == 4 && memcmp(data, "\x00\x01\x00\x01", 4) == 0) {
-			instance_->handle_ack(mac_array);
-			return; 
-		}
+		//if (len == 4 && memcmp(data, "\x00\x01\x00\x01", 4) == 0) {
+		//	instance_->handle_ack(mac_array);
+		//	return; }
+     if (len == 4 && memcmp(data, "\x00\x01\x00\x01", 4) == 0) {
+      std::lock_guard<std::mutex> lock(instance_->queue_mutex_);
+      for (auto& msg : instance_->pending_messages_) {
+        if (memcmp(msg.mac.data(), mac_array.data(), 6) == 0) {
+          msg.acked = true;
+          ESP_LOGD("basic_espnowex", "Otrzymano ACK od %02X:%02X:%02X:%02X:%02X:%02X",
+                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        }
+      }
+      return;
+    }
 
         if (len == 4) {
             std::vector<uint8_t> ack = {0x00, 0x01, 0x00, 0x01};
@@ -216,6 +291,11 @@ void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
 
 void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
     this->cmd_triggers_.push_back(trigger);
+}
+
+BasicESPNowEx::~BasicESPNowEx() {
+  esp_timer_stop(this->retry_timer_);
+  esp_timer_delete(this->retry_timer_);
 }
 
 }  // namespace espnow
