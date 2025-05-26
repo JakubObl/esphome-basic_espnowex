@@ -167,7 +167,7 @@ void BasicESPNowEx::process_send_queue() {
 	  // Usuń potwierdzone lub przekroczone limity czasu
 	  this->pending_messages_.erase(
 	    std::remove_if(this->pending_messages_.begin(), this->pending_messages_.end(),
-	      [now, this->timeout_us, this->max_retries](const PendingMessage& m) {
+	      [now, this](const PendingMessage& m) {
 	        return m.acked || ((now - m.timestamp) > this->timeout_us && m.retry_count >= this->max_retries);
 	      }),
 	    this->pending_messages_.end());
@@ -255,13 +255,13 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 		}
 		
         std::vector<uint8_t> dt(data, data + len);
-	instance_->handle_cmd(mac_array, dt);
+	instance_->handle_data(mac_array, dt);
 	std::string msg((const char *)data, len);
         instance_->handle_msg(mac_array, msg,);
     }
 }
 
-void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, const std::string &msg) {
+void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
     for (auto *trig : this->msg_triggers_) {
         trig->trigger(mac, msg);
     }
