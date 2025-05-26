@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID, CONF_MAC_ADDRESS, CONF_TRIGGER_ID
+from esphome.const import CONF_ID, CONF_MAC_ADDRESS, CONF_TRIGGER_ID, CONF_NUM_ATTEMPTS, CONF_TIMEOUT
 from esphome import automation
 
 # Dodanie definicji std_array, której brakuje w codegen
@@ -9,6 +9,7 @@ cg.std_array = std_array
 
 basic_espnowex_ns = cg.esphome_ns.namespace("espnow")
 BasicESPNowEx = basic_espnowex_ns.class_("BasicESPNowEx", cg.Component)
+
 OnMessageTrigger = basic_espnowex_ns.class_(
     "OnMessageTrigger", 
     automation.Trigger.template(cg.std_vector.template(cg.uint8), cg.std_array.template(cg.uint8, 6)),
@@ -25,17 +26,28 @@ OnRecvCmdTrigger = basic_espnowex_ns.class_(
     automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16),
     cg.Component,
 )
+OnRecvDataTrigger = basic_espnowex_ns.class_(
+    "OnRecvDataTrigger", 
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_vector.template(cg.uint8)),
+    cg.Component,
+)
 
 CONF_PEER_MAC = "peer_mac"
+CONF_MAX_RETRIES = "max_retries"
+CONF_TIMEOUT_US = "timeout_us"
 CONF_ON_MESSAGE = "on_message"
+CONF_ON_RECV_DATA = "on_recv_data"
 CONF_ON_RECV_ACK = "on_recv_ack"
 CONF_ON_RECV_CMD = "on_recv_cmd"
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(BasicESPNowEx),
     cv.Optional(CONF_PEER_MAC): cv.mac_address,
+    cv.Optional(CONF_MAX_RETRIES): cv.num_attempts,
+    cv.Optional(CONF_TIMEOUT_US): cv.timeout,
     cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnMessageTrigger)}),
     cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvAckTrigger)}),
+    cv.Optional(CONF_ON_RECV_DATA): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvDataTrigger)}),
     cv.Optional(CONF_ON_RECV_CMD): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvCmdTrigger)}),
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -48,6 +60,14 @@ async def to_code(config):
         mac_ints = [int(x, 16) for x in mac_str.split(":")]
         mac_expr = cg.RawExpression(f"std::array<uint8_t, 6>{{{', '.join(map(str, mac_ints))}}}")
         cg.add(var.set_peer_mac(mac_expr))
+
+    if CONF_MAX_RETRIES in config:
+        max_retries_int = config[CONF_MAX_RETRIES].to_int()
+        cg.add(var.set_max_retries(max_retries_int))
+
+    if CONF_TIMEOUT_US in config:
+        timeout_us_int = config[CONF_TIMEOUT_US].to_int()
+        cg.add(var.set_timeout_us(timeout_us_int))
 
     if CONF_ON_MESSAGE in config:
         for conf in config[CONF_ON_MESSAGE]:
@@ -85,5 +105,18 @@ async def to_code(config):
                 conf,
             )
             cg.add(var.add_on_recv_cmd_trigger(trigger))
+    if CONF_ON_RECV_DATA in config:
+        for conf in config.get(CONF_ON_RECV_DATA, []):
+            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
+           # await cg.register_component(trigger, conf)
+            await automation.build_automation(
+                trigger, 
+                [
+                    (cg.std_array.template(cg.uint8, 6), "mac"),
+                    (cg.std_vector.template(cg.uint8), "data")
+                ], 
+                conf,
+            )
+            cg.add(var.add_on_recv_data_trigger(trigger))
 
     return var
