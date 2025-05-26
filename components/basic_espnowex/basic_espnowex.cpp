@@ -254,14 +254,16 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 			instance_->handle_cmd(mac_array, cmd);
 		}
 		
-        std::vector<uint8_t> msg(data, data + len);
-        instance_->handle_received(msg, mac_array);
+        std::vector<uint8_t> dt(data, data + len);
+	instance_->handle_cmd(mac_array, dt);
+	std::string msg((const char *)data, len);
+        instance_->handle_msg(mac_array, msg,);
     }
 }
 
-void BasicESPNowEx::handle_received(std::vector<uint8_t> &msg, std::array<uint8_t, 6> &mac) {
-    for (auto *trig : this->triggers_) {
-        trig->trigger(msg, mac);
+void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, const std::string &msg) {
+    for (auto *trig : this->msg_triggers_) {
+        trig->trigger(mac, msg);
     }
 }
 
@@ -272,12 +274,12 @@ void BasicESPNowEx::send_cb(const uint8_t *mac, esp_now_send_status_t status) {
 }
 
 void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
-  this->triggers_.push_back(trigger);
+  this->msg_triggers_.push_back(trigger);
 }
 
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
-     parent->add_on_message_callback([this](const std::vector<uint8_t> message, const std::array<uint8_t, 6> mac) {
-          trigger(message, mac);
+     parent->add_on_message_callback([this](const std::array<uint8_t, 6> mac, const std::string message) {
+          trigger(mac, message);
       });
 }
 
@@ -290,6 +292,11 @@ OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
 OnRecvCmdTrigger::OnRecvCmdTrigger(BasicESPNowEx *parent) {
     parent->add_on_recv_cmd_callback([this](const std::array<uint8_t, 6> mac, const int16_t cmd) {
         trigger(mac, cmd);
+    });
+}
+OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
+    parent->add_on_recv_data_callback([this](const std::array<uint8_t, 6> mac, const std::vector<uint8_t> dt) {
+        trigger(mac, dt);
     });
 }
 
@@ -308,9 +315,18 @@ void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
     }
     this->on_recv_cmd_callback_.call(mac, cmd);
 }
+void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> dt) {
+    for (auto *trig : this->data_triggers_) {
+        trig->trigger(mac, dt);
+    }
+    this->on_recv_data_callback_.call(mac, dt);
+}
 
 void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
     this->cmd_triggers_.push_back(trigger);
+}
+void BasicESPNowEx::add_on_recv_data_trigger(OnRecvDataTrigger *trigger) {
+    this->data_triggers_.push_back(trigger);
 }
 
 BasicESPNowEx::~BasicESPNowEx() {
