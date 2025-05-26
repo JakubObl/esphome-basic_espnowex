@@ -257,7 +257,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
         std::vector<uint8_t> dt(data, data + len);
 	instance_->handle_data(mac_array, dt);
 	std::string msg((const char *)data, len);
-        instance_->handle_msg(mac_array, msg,);
+        instance_->handle_msg(mac_array, msg);
     }
 }
 
@@ -315,7 +315,7 @@ void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
     }
     this->on_recv_cmd_callback_.call(mac, cmd);
 }
-void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> dt) {
+void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> &dt) {
     for (auto *trig : this->data_triggers_) {
         trig->trigger(mac, dt);
     }
