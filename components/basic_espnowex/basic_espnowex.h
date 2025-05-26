@@ -41,6 +41,10 @@ class OnRecvCmdTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, int16
 public:
     explicit OnRecvCmdTrigger(BasicESPNowEx *parent);
 };
+class OnRecvDataTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::vector<uint8_t>>, public Component {
+public:
+    explicit OnRecvDataTrigger(BasicESPNowEx *parent);
+};
 
 class BasicESPNowEx : public Component {
  public:
@@ -64,6 +68,11 @@ class BasicESPNowEx : public Component {
     this->on_recv_cmd_callback_.add(std::move(cb));
   }
   CallbackManager<void(std::array<uint8_t,6>, int16_t)> on_recv_cmd_callback_;
+  
+  void add_on_recv_data_callback(std::function<void(std::array<uint8_t,6>, std::vector<uint8_t>)> &&cb) {
+    this->on_recv_data_callback_.add(std::move(cb));
+  }
+  CallbackManager<void(std::array<uint8_t,6>, std::vector<uint8_t>)> on_recv_data_callback_;
 
   void set_peer_mac(std::array<uint8_t, 6> mac);
   void set_max_retries(uint8_t max_retries_);
@@ -79,6 +88,7 @@ class BasicESPNowEx : public Component {
   void add_on_message_trigger(OnMessageTrigger *trigger);
   void add_on_recv_ack_trigger(OnRecvAckTrigger *trigger);
   void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
+  void add_on_recv_data_trigger(OnRecvDataTrigger *trigger);
   ~BasicESPNowEx();
 
  protected:
@@ -101,6 +111,8 @@ class BasicESPNowEx : public Component {
   std::vector<OnRecvAckTrigger *> ack_triggers_; 
   void handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd);
   std::vector<OnRecvCmdTrigger *> cmd_triggers_;
+  void handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> &dt);
+  std::vector<OnRecvDataTrigger *> data_triggers_;
   
 
 };
