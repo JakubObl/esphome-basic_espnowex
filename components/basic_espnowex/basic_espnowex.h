@@ -66,6 +66,8 @@ class BasicESPNowEx : public Component {
   CallbackManager<void(std::array<uint8_t,6>, int16_t)> on_recv_cmd_callback_;
 
   void set_peer_mac(std::array<uint8_t, 6> mac);
+  void set_max_retries(uint8_t max_retries_);
+  void set_timeout_us(int64_t timeout_us_);
   void send_broadcast(const std::vector<uint8_t> &msg);
   void send_broadcast_str(const std::string &message);
   void send_to_peer(const std::vector<uint8_t> &msg);
@@ -89,6 +91,8 @@ class BasicESPNowEx : public Component {
   static void send_cb(const uint8_t *mac, esp_now_send_status_t status);
   void handle_received(std::vector<uint8_t> &msg, std::array<uint8_t, 6> &mac);
 
+  int64_t timeout_us = 200 * 1000; // 200ms
+  uint8_t max_retries = 5;
   std::array<uint8_t, 6> peer_mac_{{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
   static BasicESPNowEx *instance_;
   std::vector<OnMessageTrigger *> triggers_;
