@@ -43,8 +43,8 @@ CONF_ON_RECV_CMD = "on_recv_cmd"
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(BasicESPNowEx),
     cv.Optional(CONF_PEER_MAC): cv.mac_address,
-    cv.Optional(CONF_MAX_RETRIES): cv.num_attempts,
-    cv.Optional(CONF_TIMEOUT_US): cv.timeout,
+    cv.Optional(CONF_MAX_RETRIES): cv.positive_int,
+    cv.Optional(CONF_TIMEOUT_US): cv.positive_int,
     cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnMessageTrigger)}),
     cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvAckTrigger)}),
     cv.Optional(CONF_ON_RECV_DATA): automation.validate_automation({cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnRecvDataTrigger)}),
