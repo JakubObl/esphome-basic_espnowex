@@ -12,7 +12,7 @@ BasicESPNowEx = basic_espnowex_ns.class_("BasicESPNowEx", cg.Component)
 
 OnMessageTrigger = basic_espnowex_ns.class_(
     "OnMessageTrigger", 
-    automation.Trigger.template(cg.std_vector.template(cg.uint8), cg.std_array.template(cg.uint8, 6)),
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string),
     cg.Component,
 )
 
@@ -76,8 +76,8 @@ async def to_code(config):
             await automation.build_automation(
                 trigger, 
                 [
-                    (cg.std_vector.template(cg.uint8), "message"),
-                    (cg.std_array.template(cg.uint8, 6), "mac")
+                    (cg.std_array.template(cg.uint8, 6), "mac"),
+                    (cg.std_string, "message")
                 ], 
                 conf,
             )
