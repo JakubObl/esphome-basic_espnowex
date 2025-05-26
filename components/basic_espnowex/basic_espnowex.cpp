@@ -159,21 +159,21 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
 
 void BasicESPNowEx::process_send_queue() {
   const int64_t now = esp_timer_get_time();
-  constexpr int64_t timeout_us = 200 * 1000; // 200ms
-  constexpr uint8_t max_retries = 5;
+  //constexpr int64_t timeout_us = 200 * 1000; // 200ms
+  //constexpr uint8_t max_retries = 5;
 
   // Lock
   if (xSemaphoreTake(this->queue_mutex_, 0) == pdTRUE) {
 	  // Usuń potwierdzone lub przekroczone limity czasu
 	  this->pending_messages_.erase(
 	    std::remove_if(this->pending_messages_.begin(), this->pending_messages_.end(),
-	      [now, timeout_us, max_retries](const PendingMessage& m) {
-	        return m.acked || ((now - m.timestamp) > timeout_us && m.retry_count >= max_retries);
+	      [now, this->timeout_us, this->max_retries](const PendingMessage& m) {
+	        return m.acked || ((now - m.timestamp) > this->timeout_us && m.retry_count >= this->max_retries);
 	      }),
 	    this->pending_messages_.end());
 	
 	  for (auto& msg : this->pending_messages_) {
-	    if (!msg.acked && (now - msg.timestamp) > timeout_us && msg.retry_count < max_retries) {
+	    if (!msg.acked && (now - msg.timestamp) > this->timeout_us && msg.retry_count < this->max_retries) {
 	      esp_err_t result = esp_now_send(msg.mac.data(), msg.payload.data(), msg.payload.size());
 	      if (result == ESP_OK) {
 	        msg.retry_count++;
@@ -213,6 +213,12 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t> &msg, const std::arra
 
 void BasicESPNowEx::set_peer_mac(std::array<uint8_t, 6> mac) {
   this->peer_mac_ = mac;
+}
+void BasicESPNowEx::set_max_retries(uint8_t max_retries_) {
+  this->max_retries = max_retries_;
+}
+void BasicESPNowEx::set_timeout_us(int64_t timeout_us_) {
+  this->timeout_us = timeout_us_*1000;
 }
 
 void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
