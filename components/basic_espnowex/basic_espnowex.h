@@ -29,7 +29,7 @@ struct PendingMessage {
 class BasicESPNowEx;
 
 
-class OnMessageTrigger : public ::esphome::Trigger<std::vector<uint8_t>, std::array<uint8_t, 6>>, public Component {
+class OnMessageTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::string>, public Component {
  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
 };
@@ -54,10 +54,10 @@ class BasicESPNowEx : public Component {
   void on_wifi_event(esp_event_base_t base, int32_t id, void* data);
      
    // C++ subscription API:
-   void add_on_message_callback(std::function<void(std::vector<uint8_t>, std::array<uint8_t,6>)> &&cb) {
+   void add_on_message_callback(std::function<void(std::array<uint8_t,6>, std::string)> &&cb) {
     this->on_message_callback_.add(std::move(cb));
   }
-  CallbackManager<void(std::vector<uint8_t>, std::array<uint8_t,6>)> on_message_callback_;
+  CallbackManager<void(std::array<uint8_t,6>, std::string)> on_message_callback_;
 
   void add_on_recv_ack_callback(std::function<void(std::array<uint8_t,6>)> &&cb) {
     this->on_recv_ack_callback_.add(std::move(cb));
@@ -99,13 +99,13 @@ class BasicESPNowEx : public Component {
   static void static_wifi_event(void* arg, esp_event_base_t base, int32_t id, void* data);
   static void recv_cb(const uint8_t *mac, const uint8_t *data, int len);
   static void send_cb(const uint8_t *mac, esp_now_send_status_t status);
-  void handle_received(std::vector<uint8_t> &msg, std::array<uint8_t, 6> &mac);
+  void handle_msg(std::array<uint8_t, 6> &mac, std::string &msg);
 
   int64_t timeout_us = 200 * 1000; // 200ms
   uint8_t max_retries = 5;
   std::array<uint8_t, 6> peer_mac_{{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
   static BasicESPNowEx *instance_;
-  std::vector<OnMessageTrigger *> triggers_;
+  std::vector<OnMessageTrigger *> msg_triggers_;
 
   void handle_ack(std::array<uint8_t, 6> &mac);
   std::vector<OnRecvAckTrigger *> ack_triggers_; 
