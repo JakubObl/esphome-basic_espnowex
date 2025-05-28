@@ -144,12 +144,18 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
   
   if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
   
-	  PendingMessage pending;
-	  pending.mac = peer_mac;
-	  pending.retry_count = 0;
-	  pending.timestamp = esp_timer_get_time();
-	  pending.acked = false;
-	  pending.payload = msg;
+	PendingMessage pending;
+	pending.mac = peer_mac;
+	pending.message_id = this.generate_message_id();
+	pending.retry_count = 0;
+	pending.timestamp = esp_timer_get_time();
+	pending.acked = false;
+	//pending.payload = msg;
+	// Dodanie nagłówka 0x00 + message_id
+        pending.payload.reserve(4 + msg.size());
+        pending.payload.push_back(0x00);
+        pending.payload.insert(pending.payload.end(), pending.message_id.begin(), pending.message_id.end());
+        pending.payload.insert(pending.payload.end(), msg.begin(), msg.end());
   
   	pending_messages_.push_back(pending);
     	xSemaphoreGive(this->queue_mutex_);
@@ -174,17 +180,48 @@ void BasicESPNowEx::process_send_queue() {
 	
 	  for (auto& msg : this->pending_messages_) {
 	    if (!msg.acked && (now - msg.timestamp) > this->timeout_us && msg.retry_count < this->max_retries) {
+
+		// Sprawdź czy peer istnieje
+                if (!esp_now_is_peer_exist(msg.mac.data())) {
+                    ESP_LOGD("basic_espnowex", "Peer not registered, adding...");
+                    esp_now_peer_info_t peer_info{};
+                    memcpy(peer_info.peer_addr, msg.mac.data(), 6);
+                    // Pobierz aktualny kanał WiFi
+                    uint8_t current_channel;
+                    esp_wifi_get_channel(&current_channel, nullptr);
+                    peer_info.channel = current_channel;
+                    
+                    peer_info.encrypt = false;
+                    
+                    esp_err_t add_status = esp_now_add_peer(&peer_info);
+                    if (add_status != ESP_OK) {
+                        ESP_LOGE("basic_espnowex", "Failed to add peer: %s", 
+                               esp_err_to_name(add_status));
+                        continue; // Pominięcie wysyłki przy błędzie
+                    }
+                }
+		    
 	      esp_err_t result = esp_now_send(msg.mac.data(), msg.payload.data(), msg.payload.size());
 	      if (result == ESP_OK) {
 	        msg.retry_count++;
 	        msg.timestamp = now;
-	        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, attempt %d",
-	                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.retry_count);
+	        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, ID %02X%02X%02X, attempt %d",
+	                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.message_id[0], msg.message_id[1], msg.message_id[2], msg.retry_count);
 	        }
 	      }
 	    }
 	  xSemaphoreGive(this->queue_mutex_);
   }
+}
+
+std::array<uint8_t, 3> BasicESPNowEx::generate_message_id() {
+    uint32_t random_part = esp_random();
+    int64_t timestamp = esp_timer_get_time();
+    return {
+        static_cast<uint8_t>((random_part ^ timestamp) & 0xFF),
+        static_cast<uint8_t>((random_part >> 8 ^ timestamp >> 8) & 0xFF),
+        static_cast<uint8_t>((random_part >> 16 ^ timestamp >> 16) & 0xFF)
+    };
 }
 
 /*
@@ -222,43 +259,74 @@ void BasicESPNowEx::set_timeout_us(int64_t timeout_us_) {
 }
 
 void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
-    if (instance_) {
-		std::array<uint8_t, 6> mac_array;
-		std::copy_n(mac, 6, mac_array.begin());
-		
+	if (!instance_) return;
+	std::array<uint8_t, 6> sender_mac;
+	std::copy_n(mac, 6, sender_mac.begin());
 
-		//if (len == 4 && memcmp(data, "\x00\x01\x00\x01", 4) == 0) {
-		//	instance_->handle_ack(mac_array);
-		//	return; }
-     if (len == 4 && memcmp(data, "\x00\x01\x00\x01", 4) == 0) {
-      if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
-	      for (auto& msg : instance_->pending_messages_) {
-	        if (memcmp(msg.mac.data(), mac_array.data(), 6) == 0) {
-	          msg.acked = true;
-	          ESP_LOGD("basic_espnowex", "Otrzymano ACK od %02X:%02X:%02X:%02X:%02X:%02X",
-	                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	        }
-	      }
-	      xSemaphoreGive(instance_->queue_mutex_);     
-      }
-      return;
-    }
+	// Obsługa ACK (4 bajty: 0x01 + message_id)
+	if (len == 4 && data[0] == 0x01) {
+        	std::array<uint8_t, 3> ack_id{data[1], data[2], data[3]};
+        	if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+            		auto it = std::find_if(instance_->pending_messages_.begin(), instance_->pending_messages_.end(),
+	                [&](const PendingMessage& m) {
+	                    return memcmp(m.mac.data(), sender_mac.data(), 6) == 0 &&
+	                           m.message_id == ack_id;
+	                });
+	            if (it != instance_->pending_messages_.end()) {
+	                it->acked = true;
+	                ESP_LOGD("basic_espnowex", "ACK received for message %02X%02X%02X", 
+	                    ack_id[0], ack_id[1], ack_id[2]);
+	            }
+	            xSemaphoreGive(instance_->queue_mutex_);
+        	}
+        	return;
+    	}
+	// Walidacja podstawowej wiadomości
+	if (len < 5 || data[0] != 0x00) {
+		ESP_LOGD("basic_espnowex", "Invalid message format");
+		return;
+	}	
+	// Wysyłanie ACK
+	std::array<uint8_t, 3> msg_id{data[1], data[2], data[3]};
+	std::vector<uint8_t> ack_packet{0x01};
+	ack_packet.insert(ack_packet.end(), msg_id.begin(), msg_id.end()); 
+	if (!esp_now_is_peer_exist(sender_mac.data())) {
+		esp_now_peer_info_t peer_info{};
+		memcpy(peer_info.peer_addr, sender_mac.data(), 6);
+		peer_info.channel = 0;
+		peer_info.encrypt = false;
+		esp_now_add_peer(&peer_info);
+	}
+	esp_now_send(sender_mac.data(), ack_packet.data(), ack_packet.size());
 
-        if (len == 4) {
-            std::vector<uint8_t> ack = {0x00, 0x01, 0x00, 0x01};
-            instance_->send_espnow(ack, mac_array);
-        }
-		if (len == 4 && memcmp(data, data + 2, 2) == 0) {
-			int16_t cmd;
-			memcpy(&cmd, data, sizeof(cmd));
-			instance_->handle_cmd(mac_array, cmd);
-		}
-		
-        std::vector<uint8_t> dt(data, data + len);
-	instance_->handle_data(mac_array, dt);
-	std::string msg((const char *)data, len);
-        instance_->handle_msg(mac_array, msg);
-    }
+	// 4. Przetwarzanie payloadu po usunięciu nagłówka
+	 std::vector<uint8_t> payload(data + 4, data + len);
+	    
+	// 5. Dekodowanie komendy (nowy format 2 bajtów)
+	if (payload.size() == 4) {
+		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
+		instance_->handle_cmd(sender_mac, cmd);
+	}
+	// 5. Dekodowanie komendy (jeśli payload ma dokładnie 4 bajty i pierwszy dwój jest taki sam jak ostatni dwój)
+	if (payload.size() == 4 && memcmp(payload.data(), payload.data() + 2, 2) == 0) {
+		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
+		instance_->handle_cmd(sender_mac, cmd);
+	}
+
+	
+	if (len == 4 && memcmp(data, data + 2, 2) == 0) {
+		int16_t cmd;
+		memcpy(&cmd, data, sizeof(cmd));
+		instance_->handle_cmd(mac_array, cmd);
+	}
+	
+	// 6. Przekazanie danych i wiadomości tekstowej
+	instance_->handle_data(sender_mac, payload);
+	    
+	if (!payload.empty()) {
+		std::string msg(payload.begin(), payload.end());
+		instance_->handle_msg(sender_mac, msg);
+	}
 }
 
 void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
@@ -284,7 +352,7 @@ OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
 }
 
 OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
-    parent->add_on_recv_ack_callback([this](const std::array<uint8_t, 6> mac) {
+    parent->add_on_recv_ack_callback([this](const std::array<uint8_t, 6> mac, std::array<uint8_t, 3> msg_id) {
          trigger(mac);
     });
 }
@@ -300,9 +368,9 @@ OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
     });
 }
 
-void BasicESPNowEx::handle_ack(std::array<uint8_t, 6> &mac) {
+void BasicESPNowEx::handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 3> &msg_id) {
     for (auto *trig : this->ack_triggers_) {
-        trig->trigger(mac);
+        trig->trigger(mac, msg_id);
     }
 }
 
