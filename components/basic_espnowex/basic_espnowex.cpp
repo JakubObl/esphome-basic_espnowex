@@ -146,7 +146,7 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
   
 	PendingMessage pending;
 	pending.mac = peer_mac;
-	pending.message_id = this.generate_message_id();
+	pending.message_id = this->generate_message_id();
 	pending.peer_add_attempts = 0;
 	pending.retry_count = 0;
 	pending.timestamp = esp_timer_get_time();
@@ -306,28 +306,15 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 
 	// 4. Przetwarzanie payloadu po usunięciu nagłówka
 	 std::vector<uint8_t> payload(data + 4, data + len);
-	    
-	// 5. Dekodowanie komendy (nowy format 2 bajtów)
-	if (payload.size() == 4) {
-		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
-		instance_->handle_cmd(sender_mac, cmd);
-	}
+
 	// 5. Dekodowanie komendy (jeśli payload ma dokładnie 4 bajty i pierwszy dwój jest taki sam jak ostatni dwój)
 	if (payload.size() == 4 && memcmp(payload.data(), payload.data() + 2, 2) == 0) {
 		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
 		instance_->handle_cmd(sender_mac, cmd);
 	}
-
-	
-	if (len == 4 && memcmp(data, data + 2, 2) == 0) {
-		int16_t cmd;
-		memcpy(&cmd, data, sizeof(cmd));
-		instance_->handle_cmd(mac_array, cmd);
-	}
 	
 	// 6. Przekazanie danych i wiadomości tekstowej
-	instance_->handle_data(sender_mac, payload);
-	    
+	instance_->handle_data(sender_mac, payload);  
 	if (!payload.empty()) {
 		std::string msg(payload.begin(), payload.end());
 		instance_->handle_msg(sender_mac, msg);
@@ -358,7 +345,7 @@ OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
 
 OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
     parent->add_on_recv_ack_callback([this](const std::array<uint8_t, 6> mac, std::array<uint8_t, 3> msg_id) {
-         trigger(mac);
+         trigger(mac, msg_id);
     });
 }
 
