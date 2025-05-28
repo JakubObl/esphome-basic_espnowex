@@ -147,6 +147,7 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
 	PendingMessage pending;
 	pending.mac = peer_mac;
 	pending.message_id = this.generate_message_id();
+	pending.peer_add_attempts = 0;
 	pending.retry_count = 0;
 	pending.timestamp = esp_timer_get_time();
 	pending.acked = false;
@@ -195,8 +196,11 @@ void BasicESPNowEx::process_send_queue() {
                     
                     esp_err_t add_status = esp_now_add_peer(&peer_info);
                     if (add_status != ESP_OK) {
-                        ESP_LOGE("basic_espnowex", "Failed to add peer: %s", 
-                               esp_err_to_name(add_status));
+                        ESP_LOGE("basic_espnowex", "Failed to add peer: %s", esp_err_to_name(add_status));
+			msg.peer_add_attempts++;
+			if (msg.peer_add_attempts > 3) {
+				msg.acked = true; // Wymuszenie usunięcia z kolejki
+			}
                         continue; // Pominięcie wysyłki przy błędzie
                     }
                 }
