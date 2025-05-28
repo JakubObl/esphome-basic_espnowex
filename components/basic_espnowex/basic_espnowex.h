@@ -20,6 +20,7 @@ namespace espnow {
 
 struct PendingMessage {
   std::array<uint8_t, 6> mac;
+  std::array<uint8_t, 3> message_id;
   uint8_t retry_count;
   int64_t timestamp;
   bool acked;
@@ -33,7 +34,7 @@ class OnMessageTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::
  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
 };
-class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>>, public Component {
+class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, , std::array<uint8_t, 3>>, public Component {
 public:
     explicit OnRecvAckTrigger(BasicESPNowEx *parent);
 };
@@ -59,7 +60,7 @@ class BasicESPNowEx : public Component {
   }
   CallbackManager<void(std::array<uint8_t,6>, std::string)> on_message_callback_;
 
-  void add_on_recv_ack_callback(std::function<void(std::array<uint8_t,6>)> &&cb) {
+  void add_on_recv_ack_callback(std::function<void(std::array<uint8_t,6>, , std::array<uint8_t, 3>)> &&cb) {
     this->on_recv_ack_callback_.add(std::move(cb));
   }
   CallbackManager<void(std::array<uint8_t,6>)> on_recv_ack_callback_;
@@ -92,6 +93,7 @@ class BasicESPNowEx : public Component {
   ~BasicESPNowEx();
 
  protected:
+  std::array<uint8_t, 3> generate_message_id();
   void process_send_queue();
   std::vector<PendingMessage> pending_messages_;
   SemaphoreHandle_t queue_mutex_;;
@@ -107,7 +109,7 @@ class BasicESPNowEx : public Component {
   static BasicESPNowEx *instance_;
   std::vector<OnMessageTrigger *> msg_triggers_;
 
-  void handle_ack(std::array<uint8_t, 6> &mac);
+  void handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 3> &msg_id);
   std::vector<OnRecvAckTrigger *> ack_triggers_; 
   void handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd);
   std::vector<OnRecvCmdTrigger *> cmd_triggers_;
