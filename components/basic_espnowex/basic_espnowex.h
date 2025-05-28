@@ -21,6 +21,7 @@ namespace espnow {
 struct PendingMessage {
   std::array<uint8_t, 6> mac;
   std::array<uint8_t, 3> message_id;
+  uint8_t peer_add_attempts;
   uint8_t retry_count;
   int64_t timestamp;
   bool acked;
