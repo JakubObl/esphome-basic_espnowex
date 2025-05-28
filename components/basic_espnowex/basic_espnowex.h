@@ -35,7 +35,7 @@ class OnMessageTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::
  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
 };
-class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, , std::array<uint8_t, 3>>, public Component {
+class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::array<uint8_t, 3>>, public Component {
 public:
     explicit OnRecvAckTrigger(BasicESPNowEx *parent);
 };
@@ -61,7 +61,7 @@ class BasicESPNowEx : public Component {
   }
   CallbackManager<void(std::array<uint8_t,6>, std::string)> on_message_callback_;
 
-  void add_on_recv_ack_callback(std::function<void(std::array<uint8_t,6>, , std::array<uint8_t, 3>)> &&cb) {
+  void add_on_recv_ack_callback(std::function<void(std::array<uint8_t,6>, std::array<uint8_t, 3>)> &&cb) {
     this->on_recv_ack_callback_.add(std::move(cb));
   }
   CallbackManager<void(std::array<uint8_t,6>)> on_recv_ack_callback_;
