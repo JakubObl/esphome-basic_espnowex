@@ -283,6 +283,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	            }
 	            xSemaphoreGive(instance_->queue_mutex_);
         	}
+		instance_->handle_ack(sender_mac, ack_id);
         	return;
     	}
 	// Walidacja podstawowej wiadomości
