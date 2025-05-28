@@ -64,7 +64,7 @@ class BasicESPNowEx : public Component {
   void add_on_recv_ack_callback(std::function<void(std::array<uint8_t,6>, std::array<uint8_t, 3>)> &&cb) {
     this->on_recv_ack_callback_.add(std::move(cb));
   }
-  CallbackManager<void(std::array<uint8_t,6>)> on_recv_ack_callback_;
+  CallbackManager<void(std::array<uint8_t,6>, std::array<unsigned char, 3>)> on_recv_ack_callback_;
 
   void add_on_recv_cmd_callback(std::function<void(std::array<uint8_t,6>, int16_t)> &&cb) {
     this->on_recv_cmd_callback_.add(std::move(cb));
