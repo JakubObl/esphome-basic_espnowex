@@ -18,7 +18,7 @@ OnMessageTrigger = basic_espnowex_ns.class_(
 
 OnRecvAckTrigger = basic_espnowex_ns.class_(
     "OnRecvAckTrigger", 
-    automation.Trigger.template(cg.std_array.template(cg.uint8, 6)),
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3)),
     cg.Component,
 )
 OnRecvCmdTrigger = basic_espnowex_ns.class_(
@@ -88,7 +88,10 @@ async def to_code(config):
           #  await cg.register_component(trigger, conf)
             await automation.build_automation(
                 trigger, 
-                [(cg.std_array.template(cg.uint8, 6), "mac")], 
+                [
+                    (cg.std_array.template(cg.uint8, 6), "mac"),
+                    (cg.std_array.template(cg.uint8, 3), "msg_id")
+                ], 
                 conf,
             )
             cg.add(var.add_on_recv_ack_trigger(trigger))
