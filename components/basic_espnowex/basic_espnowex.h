@@ -29,7 +29,7 @@ struct PendingMessage {
 };
 struct ReceivedMessageInfo {
     std::array<uint8_t, 6> mac;
-    std::array<uint8_t, 3> data; // lub inny identyfikator, np. data
+    std::vector<uint8_t> data;
     int64_t timestamp;
 };
 
