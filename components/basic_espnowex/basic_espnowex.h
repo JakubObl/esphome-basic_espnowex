@@ -91,6 +91,7 @@ class BasicESPNowEx : public Component {
   void send_espnow_str(std::string message, const std::array<uint8_t, 6> &peer_mac);
   void send_espnow(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac);
   void send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &peer_mac);
+  void clear_pending_messages();
 
   void add_on_message_trigger(OnMessageTrigger *trigger);
   void add_on_recv_ack_trigger(OnRecvAckTrigger *trigger);
