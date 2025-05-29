@@ -53,7 +53,7 @@ void BasicESPNowEx::setup() {
 
   esp_now_peer_info_t peer = {};
   memcpy(peer.peer_addr, this->peer_mac_.data(), 6);
-  peer.channel = wifi_channel;
+  peer.channel = 0; //wifi_channel;
   peer.encrypt = false;
 
   if (!esp_now_is_peer_exist(peer.peer_addr)) {
@@ -226,7 +226,7 @@ void BasicESPNowEx::process_send_queue() {
                     // Pobierz aktualny kanał WiFi
                     uint8_t current_channel;
                     esp_wifi_get_channel(&current_channel, nullptr);
-                    peer_info.channel = current_channel;
+                    peer_info.channel = 0; //current_channel;
                     
                     peer_info.encrypt = false;
                     
