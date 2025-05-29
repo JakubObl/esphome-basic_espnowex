@@ -133,11 +133,40 @@ void BasicESPNowEx::send_espnow_str(std::string message, const std::array<uint8_
 }
 void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &peer_mac) {
     std::vector<uint8_t> msg(4);
-    msg[0] = static_cast<uint8_t>(cmd & 0xFF);static_cast<uint8_t>((cmd >> 8) & 0xFF);
+    msg[0] = static_cast<uint8_t>(cmd & 0xFF);
     msg[1] = static_cast<uint8_t>((cmd >> 8) & 0xFF);
     msg[2] = msg[0];
     msg[3] = msg[1];
-    this->send_espnow(msg, peer_mac);
+    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+        auto it = std::find_if(
+            this->pending_messages_.begin(),
+            this->pending_messages_.end(),
+            [&](PendingMessage& m) {
+                // warunek 1: ten sam peer_mac
+                if (m.mac != peer_mac)
+                    return false;
+                // warunek 2: niezaakceptowana wiadomość
+                if (m.acked)
+                    return false;
+                // warunek 3: payload ma dokładnie 8 bajtów
+                if (m.payload.size() != 8)
+                    return false;
+                // warunek 4: bajty 5-8 payloadu są identyczne jak msg
+                // (zakładamy, że msg ma co najmniej 4 bajty)
+                return std::equal(m.payload.begin() + 4, m.payload.begin() + 8, msg.begin());
+            }
+        );
+
+        if (it != this->pending_messages_.end()) {
+            it->peer_add_attempts = 0;
+            it->retry_count = 0;
+            it->timestamp = esp_timer_get_time();
+            // nie wysyłamy ponownie
+        } else {
+            this->send_espnow(msg, peer_mac);
+        }
+        xSemaphoreGive(this->queue_mutex_);
+    }
 }
 
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
@@ -277,10 +306,12 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	                           m.message_id == ack_id;
 	                });
 	            if (it != instance_->pending_messages_.end()) {
-	                it->acked = true;
-	                ESP_LOGD("basic_espnowex", "ACK received for message %02X%02X%02X", ack_id[0], ack_id[1], ack_id[2]);
-			instance_->handle_ack(sender_mac, ack_id);
-	            }
+			if (!it->acked){
+	                	it->acked = true;
+	                	ESP_LOGD("basic_espnowex", "ACK received for message %02X%02X%02X", ack_id[0], ack_id[1], ack_id[2]);
+				instance_->handle_ack(sender_mac, ack_id);
+	            	}
+		    }
 	            xSemaphoreGive(instance_->queue_mutex_);
         	}
         	return;
@@ -302,6 +333,42 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 		esp_now_add_peer(&peer_info);
 	}
 	esp_now_send(sender_mac.data(), ack_packet.data(), ack_packet.size());
+
+	int64_t now = esp_timer_get_time();
+
+	// Mutex chroniący dostęp do historii
+	if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+		// Usuń stare wpisy (>300s)
+	        instance_->received_history_.erase(
+	            std::remove_if(
+	                instance_->received_history_.begin(),
+	                instance_->received_history_.end(),
+	                [now](const ReceivedMessageInfo& info) {
+	                    return (now - info.timestamp) > 300000000; // 300s w mikrosekundach
+	                }
+	            ),
+	            instance_->received_history_.end()
+		);
+	
+	        // Szukaj duplikatu
+	        auto it = std::find_if(
+	            instance_->received_history_.begin(),
+	            instance_->received_history_.end(),
+	            [&](const ReceivedMessageInfo& info) {
+	                return info.mac == sender_mac && info.data.size() == len && std::equal(info.data.begin(), info.data.end(), data);
+	            }
+	        );
+	
+	        if (it != instance_->received_history_.end()) {
+	            // Duplikat – nie przetwarzaj dalej
+	            xSemaphoreGive(instance_->queue_mutex_);
+	            return;
+	        }
+	
+	        // Unikalna wiadomość – zapisz do historii
+	        instance_->received_history_.push_back({sender_mac, data, now});
+	        xSemaphoreGive(instance_->queue_mutex_);
+	}
 
 	// 4. Przetwarzanie payloadu po usunięciu nagłówka
 	 std::vector<uint8_t> payload(data + 4, data + len);
