@@ -61,7 +61,7 @@ void BasicESPNowEx::setup() {
   }
 	
   // 1) Utwórz semafor
-  this->queue_mutex_ = xSemaphoreCreateMutex();
+  //this->queue_mutex_ = xSemaphoreCreateMutex();
 	
   // Konfiguracja timera do okresowej weryfikacji kolejki
   const esp_timer_create_args_t timer_args = {
@@ -137,7 +137,7 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
     msg[1] = static_cast<uint8_t>((cmd >> 8) & 0xFF);
     msg[2] = msg[0];
     msg[3] = msg[1];
-    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+//    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
         auto it = std::find_if(
             this->pending_messages_.begin(),
             this->pending_messages_.end(),
@@ -165,20 +165,20 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
         } else {
             this->send_espnow(msg, peer_mac);
         }
-        xSemaphoreGive(this->queue_mutex_);
-    }
+  //      xSemaphoreGive(this->queue_mutex_);
+  //  }
 }
 
 void BasicESPNowEx::clear_pending_messages() {
-    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+   // if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
         this->pending_messages_.clear(); // Usuwa wszystkie elementy z kolejki
         xSemaphoreGive(this->queue_mutex_);
-    }
+   // }
 }
 
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
   
-  if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+ // if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
   
 	PendingMessage pending;
 	pending.mac = peer_mac;
@@ -195,8 +195,8 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
         pending.payload.insert(pending.payload.end(), msg.begin(), msg.end());
   
   	pending_messages_.push_back(pending);
-    	xSemaphoreGive(this->queue_mutex_);
-  }
+    	//xSemaphoreGive(this->queue_mutex_);
+  //}
   process_send_queue();
 }
 
@@ -206,7 +206,7 @@ void BasicESPNowEx::process_send_queue() {
   //constexpr uint8_t max_retries = 5;
 
   // Lock
-  if (xSemaphoreTake(this->queue_mutex_, 0) == pdTRUE) {
+ // if (xSemaphoreTake(this->queue_mutex_, 0) == pdTRUE) {
 	  // Usuń potwierdzone lub przekroczone limity czasu
 	  this->pending_messages_.erase(
 	    std::remove_if(this->pending_messages_.begin(), this->pending_messages_.end(),
@@ -250,8 +250,8 @@ void BasicESPNowEx::process_send_queue() {
 	        }
 	      }
 	    }
-	  xSemaphoreGive(this->queue_mutex_);
-  }
+	//  xSemaphoreGive(this->queue_mutex_);
+  //}
 }
 
 std::array<uint8_t, 3> BasicESPNowEx::generate_message_id() {
@@ -306,7 +306,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	// Obsługa ACK (4 bajty: 0x01 + message_id)
 	if (len == 4 && data[0] == 0x01) {
         	std::array<uint8_t, 3> ack_id{data[1], data[2], data[3]};
-        	if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+        	//if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
             		auto it = std::find_if(instance_->pending_messages_.begin(), instance_->pending_messages_.end(),
 	                [&](const PendingMessage& m) {
 	                    return memcmp(m.mac.data(), sender_mac.data(), 6) == 0 &&
@@ -319,8 +319,8 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 				instance_->handle_ack(sender_mac, ack_id);
 	            	}
 		    }
-	            xSemaphoreGive(instance_->queue_mutex_);
-        	}
+	          //  xSemaphoreGive(instance_->queue_mutex_);
+        	//}
         	return;
     	}
 	// Walidacja podstawowej wiadomości
@@ -344,7 +344,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	int64_t now = esp_timer_get_time();
 
 	// Mutex chroniący dostęp do historii
-	if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+	//if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
 		// Usuń stare wpisy (>300s)
 	        instance_->received_history_.erase(
 	            std::remove_if(
@@ -377,8 +377,8 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 		}
 	        // Unikalna wiadomość – zapisz do historii
 	        instance_->received_history_.push_back({sender_mac, std::vector<uint8_t>(data, data + len), now});
-	        xSemaphoreGive(instance_->queue_mutex_);
-	}
+	  //      xSemaphoreGive(instance_->queue_mutex_);
+	//}
 
 	// 4. Przetwarzanie payloadu po usunięciu nagłówka
 	 std::vector<uint8_t> payload(data + 4, data + len);
