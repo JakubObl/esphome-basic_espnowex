@@ -364,9 +364,12 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	            xSemaphoreGive(instance_->queue_mutex_);
 	            return;
 	        }
-	
+		constexpr size_t MAX_HISTORY_SIZE = 1000; // lub inna wybrana wartość
+		if (instance_->received_history_.size() >= MAX_HISTORY_SIZE) {
+		    instance_->received_history_.erase(instance_->received_history_.begin()); // usuń najstarszy
+		}
 	        // Unikalna wiadomość – zapisz do historii
-	        instance_->received_history_.push_back({sender_mac, data, now});
+	        instance_->received_history_.push_back({sender_mac, std::vector<uint8_t>(data, data + len), now});
 	        xSemaphoreGive(instance_->queue_mutex_);
 	}
 
