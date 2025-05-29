@@ -27,6 +27,11 @@ struct PendingMessage {
   bool acked;
   std::vector<uint8_t> payload;
 };
+struct ReceivedMessageInfo {
+    std::array<uint8_t, 6> mac;
+    std::array<uint8_t, 3> data; // lub inny identyfikator, np. data
+    int64_t timestamp;
+};
 
 class BasicESPNowEx;
 
@@ -97,6 +102,7 @@ class BasicESPNowEx : public Component {
   std::array<uint8_t, 3> generate_message_id();
   void process_send_queue();
   std::vector<PendingMessage> pending_messages_;
+  std::vector<ReceivedMessageInfo> received_history_;
   SemaphoreHandle_t queue_mutex_;;
   esp_timer_handle_t retry_timer_;
   static void static_wifi_event(void* arg, esp_event_base_t base, int32_t id, void* data);
