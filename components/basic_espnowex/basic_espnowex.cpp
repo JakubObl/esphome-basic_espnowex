@@ -197,7 +197,7 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
   	pending_messages_.push_back(pending);
     	//xSemaphoreGive(this->queue_mutex_);
   //}
-  process_send_queue();
+  //process_send_queue();
 }
 
 void BasicESPNowEx::process_send_queue() {
