@@ -172,7 +172,7 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
 void BasicESPNowEx::clear_pending_messages() {
    // if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
         this->pending_messages_.clear(); // Usuwa wszystkie elementy z kolejki
-        xSemaphoreGive(this->queue_mutex_);
+      //  xSemaphoreGive(this->queue_mutex_);
    // }
 }
 
@@ -368,7 +368,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	
 	        if (it != instance_->received_history_.end()) {
 	            // Duplikat – nie przetwarzaj dalej
-	            xSemaphoreGive(instance_->queue_mutex_);
+	          //  xSemaphoreGive(instance_->queue_mutex_);
 	            return;
 	        }
 		constexpr size_t MAX_HISTORY_SIZE = 1000; // lub inna wybrana wartość
@@ -469,7 +469,7 @@ BasicESPNowEx::~BasicESPNowEx() {
   esp_timer_stop(this->retry_timer_);
   esp_timer_delete(this->retry_timer_);
   // Usuń semafor
-  vSemaphoreDelete(this->queue_mutex_);
+ // vSemaphoreDelete(this->queue_mutex_);
 }
 
 }  // namespace espnow
