@@ -51,7 +51,7 @@ void BasicESPNowEx::setup() {
 
   instance_ = this;
 
-  esp_now_peer_info_t peer{};
+  esp_now_peer_info_t peer = {};
   memcpy(peer.peer_addr, this->peer_mac_.data(), 6);
   peer.channel = wifi_channel;
   peer.encrypt = false;
@@ -91,7 +91,7 @@ void BasicESPNowEx::on_wifi_event(esp_event_base_t base, int32_t id, void* data)
     esp_now_register_send_cb(&BasicESPNowEx::send_cb);
   
     // Ponowna inicjalizacja peerów
-    esp_now_peer_info_t peer{};
+    esp_now_peer_info_t peer = {};
     memcpy(peer.peer_addr, this->peer_mac_.data(), 6);
     peer.channel = 0; // Kanał będzie aktualizowany dynamicznie
     peer.encrypt = false;
@@ -133,8 +133,8 @@ void BasicESPNowEx::send_espnow_str(std::string message, const std::array<uint8_
 }
 void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &peer_mac) {
     std::vector<uint8_t> msg(4);
-    msg[0] = static_cast<uint8_t>(cmd & 0xFF);
-    msg[1] = static_cast<uint8_t>((cmd >> 8) & 0xFF);
+    msg[0] = static_cast<uint8_t>((cmd >> 8) & 0xFF);
+    msg[1] = static_cast<uint8_t>(cmd & 0xFF);
     msg[2] = msg[0];
     msg[3] = msg[1];
 //    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
@@ -221,7 +221,7 @@ void BasicESPNowEx::process_send_queue() {
 		// Sprawdź czy peer istnieje
                 if (!esp_now_is_peer_exist(msg.mac.data())) {
                     ESP_LOGD("basic_espnowex", "Peer not registered, adding...");
-                    esp_now_peer_info_t peer_info{};
+                    esp_now_peer_info_t peer_info = {};
                     memcpy(peer_info.peer_addr, msg.mac.data(), 6);
                     // Pobierz aktualny kanał WiFi
                     uint8_t current_channel;
@@ -268,7 +268,7 @@ std::array<uint8_t, 3> BasicESPNowEx::generate_message_id() {
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac) {
 
     if (!esp_now_is_peer_exist(peer_mac.data())) {
-        esp_now_peer_info_t peer_info{};
+        esp_now_peer_info_t peer_info = {};
         memcpy(peer_info.peer_addr, peer_mac.data(), 6);
         peer_info.channel = 0;
         peer_info.encrypt = false;
@@ -333,7 +333,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	std::vector<uint8_t> ack_packet{0x01};
 	ack_packet.insert(ack_packet.end(), msg_id.begin(), msg_id.end()); 
 	if (!esp_now_is_peer_exist(sender_mac.data())) {
-		esp_now_peer_info_t peer_info{};
+		esp_now_peer_info_t peer_info = {};
 		memcpy(peer_info.peer_addr, sender_mac.data(), 6);
 		peer_info.channel = 0;
 		peer_info.encrypt = false;
