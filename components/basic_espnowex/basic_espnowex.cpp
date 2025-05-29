@@ -169,6 +169,13 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
     }
 }
 
+void BasicESPNowEx::clear_pending_messages() {
+    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+        this->pending_messages_.clear(); // Usuwa wszystkie elementy z kolejki
+        xSemaphoreGive(this->queue_mutex_);
+    }
+}
+
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
   
   if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
