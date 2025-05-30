@@ -10,11 +10,35 @@ cg.std_array = std_array
 basic_espnowex_ns = cg.esphome_ns.namespace("espnow")
 BasicESPNowEx = basic_espnowex_ns.class_("BasicESPNowEx", cg.Component)
 
-RecvCmdTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16)
-RecvAckTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3))
-RecvDataTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_vector.template(cg.uint8))
-MessageTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string)
+#RecvCmdTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16)
+#RecvAckTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3))
+#RecvDataTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_vector.template(cg.uint8))
+#MessageTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string)
 
+# ✨ Definicje klas triggerów dla ESPHome (tylko typy!)
+MessageTrigger = basic_espnowex_ns.class_(
+    "OnMessageTrigger",
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string),
+    cg.Component,
+)
+
+RecvCmdTrigger = basic_espnowex_ns.class_(
+    "OnRecvCmdTrigger",
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16),
+    cg.Component,
+)
+
+RecvAckTrigger = basic_espnowex_ns.class_(
+    "OnRecvAckTrigger",
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3)),
+    cg.Component,
+)
+
+RecvDataTrigger = basic_espnowex_ns.class_(
+    "OnRecvDataTrigger",
+    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_vector.template(cg.uint8)),
+    cg.Component,
+)
 
 #OnMessageTrigger = basic_espnowex_ns.class_(
 #    "OnMessageTrigger", 
