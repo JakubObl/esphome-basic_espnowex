@@ -93,10 +93,10 @@ class BasicESPNowEx : public Component {
   void send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &peer_mac);
   void clear_pending_messages();
 
-  void add_on_message_trigger(OnMessageTrigger *trigger);
-  void add_on_recv_ack_trigger(OnRecvAckTrigger *trigger);
-  void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
-  void add_on_recv_data_trigger(OnRecvDataTrigger *trigger);
+  //void add_on_message_trigger(OnMessageTrigger *trigger);
+  //void add_on_recv_ack_trigger(OnRecvAckTrigger *trigger);
+  //void add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger);
+  //void add_on_recv_data_trigger(OnRecvDataTrigger *trigger);
   ~BasicESPNowEx();
 
  protected:
@@ -117,14 +117,14 @@ class BasicESPNowEx : public Component {
   uint8_t max_retries = 5;
   std::array<uint8_t, 6> peer_mac_{{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
   static BasicESPNowEx *instance_;
-  std::vector<OnMessageTrigger *> msg_triggers_;
+  //std::vector<OnMessageTrigger *> msg_triggers_;
 
   void handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 3> &msg_id);
-  std::vector<OnRecvAckTrigger *> ack_triggers_; 
+  //std::vector<OnRecvAckTrigger *> ack_triggers_; 
   void handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd);
-  std::vector<OnRecvCmdTrigger *> cmd_triggers_;
+  //std::vector<OnRecvCmdTrigger *> cmd_triggers_;
   void handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> &dt);
-  std::vector<OnRecvDataTrigger *> data_triggers_;
+  //std::vector<OnRecvDataTrigger *> data_triggers_;
   
 
 };
