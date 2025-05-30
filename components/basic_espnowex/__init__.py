@@ -126,36 +126,36 @@ async def to_code(config):
 #            )
 #            cg.add(var.add_on_recv_data_trigger(trigger))
 
-#    if CONF_ON_MESSAGE in config:
-#        for conf in config[CONF_ON_MESSAGE]:
-#            await automation.build_automation(
-#                var.on_message_callback_,
-#                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.std_string, "message")],
-#                conf,
-#            )
-#
-#    if CONF_ON_RECV_ACK in config:
-#        for conf in config[CONF_ON_RECV_ACK]:
-#            await automation.build_automation(
-#                var.on_recv_ack_callback_,
-#                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.std_array.template(cg.uint8, 3), "msg_id")],
-#                conf,
-#            )
-#
-#    if CONF_ON_RECV_CMD in config:
-#        for conf in config[CONF_ON_RECV_CMD]:
-#            await automation.build_automation(
-#                var.on_recv_cmd_callback_,
-#                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.int16, "cmd")],
-#                conf,
-#            )
-#
-#    if CONF_ON_RECV_DATA in config:
-#        for conf in config[CONF_ON_RECV_DATA]:
-#            await automation.build_automation(
-#                var.on_recv_data_callback_,
-#                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.std_vector.template(cg.uint8), "data")],
-#                conf,
-#            )
+    if CONF_ON_MESSAGE in config:
+        for conf in config[CONF_ON_MESSAGE]:
+            await automation.build_automation(
+                var.on_message_callback_,
+                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.std_string, "message")],
+                conf,
+            )
+
+    if CONF_ON_RECV_ACK in config:
+        for conf in config[CONF_ON_RECV_ACK]:
+            await automation.build_automation(
+                var.on_recv_ack_callback_,
+                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.std_array.template(cg.uint8, 3), "msg_id")],
+                conf,
+            )
+
+    if CONF_ON_RECV_CMD in config:
+        for conf in config[CONF_ON_RECV_CMD]:
+            await automation.build_automation(
+                var.on_recv_cmd_callback_,
+                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.int16, "cmd")],
+                conf,
+            )
+
+    if CONF_ON_RECV_DATA in config:
+        for conf in config[CONF_ON_RECV_DATA]:
+            await automation.build_automation(
+                var.on_recv_data_callback_,
+                [(cg.std_array.template(cg.uint8, 6), "mac"), (cg.std_vector.template(cg.uint8), "data")],
+                conf,
+            )
 
     return var
