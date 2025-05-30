@@ -69,60 +69,6 @@ async def to_code(config):
         timeout_us_int = config[CONF_TIMEOUT_US].to_int()
         cg.add(var.set_timeout_us(timeout_us_int))
 
-#    if CONF_ON_MESSAGE in config:
-#        for conf in config[CONF_ON_MESSAGE]:
-#            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
-#          #  await cg.register_component(trigger, conf)
-#            await automation.build_automation(
-#                trigger, 
-#                [
-#                    (cg.std_array.template(cg.uint8, 6), "mac"),
-#                    (cg.std_string, "message")
-#                ], 
-#                conf,
-#            )
-#            cg.add(var.add_on_message_trigger(trigger))
-#    if CONF_ON_RECV_ACK in config:
-#        for conf in config[CONF_ON_RECV_ACK]:
-#            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
-#          #  await cg.register_component(trigger, conf)
-#            await automation.build_automation(
-#                trigger, 
-#                [
-#                    (cg.std_array.template(cg.uint8, 6), "mac"),
-#                    (cg.std_array.template(cg.uint8, 3), "msg_id")
-#                ], 
-#                conf,
-#            )
-#            cg.add(var.add_on_recv_ack_trigger(trigger))
-#    if CONF_ON_RECV_CMD in config:
-#        for conf in config.get(CONF_ON_RECV_CMD, []):
-#            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
-#           # await cg.register_component(trigger, conf)
-#            await automation.build_automation(
-#                trigger, 
-#                [
-#                    (cg.std_array.template(cg.uint8, 6), "mac"),
-#                    (cg.int16, "cmd")
-#                ], 
-#                conf,
-#            )
-#            cg.add(var.add_on_recv_cmd_trigger(trigger))
-#    if CONF_ON_RECV_DATA in config:
-#        for conf in config.get(CONF_ON_RECV_DATA, []):
-#            trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
-#           # await cg.register_component(trigger, conf)
-#            await automation.build_automation(
-#                trigger, 
-#                [
-#                    (cg.std_array.template(cg.uint8, 6), "mac"),
-#                    (cg.std_vector.template(cg.uint8), "data")
-#                ], 
-#                conf,
-#            )
-#            cg.add(var.add_on_recv_data_trigger(trigger))
-
-    # Automatyzacje
     for conf in config.get(CONF_ON_MESSAGE, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
         await automation.build_automation(
