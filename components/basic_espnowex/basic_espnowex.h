@@ -35,7 +35,7 @@ struct ReceivedMessageInfo {
 
 class BasicESPNowEx;
 
-/*
+
 class OnMessageTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::string>, public Component {
   public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
@@ -52,7 +52,7 @@ class OnRecvDataTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std:
   public:
     explicit OnRecvDataTrigger(BasicESPNowEx *parent);
 };
-*/
+
 class BasicESPNowEx : public Component {
  public:
   void setup() override;
