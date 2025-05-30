@@ -361,6 +361,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	if (payload.size() == 4 && memcmp(payload.data(), payload.data() + 2, 2) == 0) {
 		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
 		instance_->handle_cmd(sender_mac, cmd);
+		ESP_LOGE("basic_espnowex", "CMD received for message...");
 	}
 	
 	// 6. Przekazanie danych i wiadomości tekstowej
@@ -415,6 +416,7 @@ void BasicESPNowEx::handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 
 void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
     for (auto *trig : this->cmd_triggers_) {
         trig->trigger(mac, cmd);
+	    ESP_LOGE("basic_espnowex", "CMD trigger ...");
     }
     this->on_recv_cmd_callback_.call(mac, cmd);
 }
