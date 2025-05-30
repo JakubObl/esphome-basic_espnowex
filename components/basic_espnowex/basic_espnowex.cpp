@@ -35,7 +35,7 @@ void BasicESPNowEx::setup() {
   esp_err_t err = esp_wifi_init(&cfg);
   if (err == ESP_ERR_WIFI_INIT_STATE) {
     // WiFi już zainicjalizowane - to normalne w ESPHome
-    ESP_LOGE("basic_espnowex", "WiFi already initialized");
+    ESP_LOGI("basic_espnowex", "WiFi already initialized");
   } else if (err != ESP_OK) {
     ESP_LOGE("basic_espnowex", "WiFi init failed: %s", esp_err_to_name(err));
     return;
@@ -76,7 +76,7 @@ void BasicESPNowEx::setup() {
   ESP_ERROR_CHECK(esp_timer_create(&timer_args, &this->retry_timer_));
   ESP_ERROR_CHECK(esp_timer_start_periodic(this->retry_timer_, 400000)); // 100ms
 
-  ESP_LOGE("basic_espnowex", "ESP-NOW initialized");
+  ESP_LOGI("basic_espnowex", "ESP-NOW initialized");
 }
 
 void BasicESPNowEx::on_wifi_event(esp_event_base_t base, int32_t id, void* data) {
@@ -229,7 +229,7 @@ void BasicESPNowEx::process_send_queue() {
 
 		// Sprawdź czy peer istnieje
                 if (!esp_now_is_peer_exist(msg.mac.data())) {
-                    ESP_LOGE("basic_espnowex", "Peer not registered, adding...");
+                    ESP_LOGD("basic_espnowex", "Peer not registered, adding...");
                     esp_now_peer_info_t peer_info = {};
                     memcpy(peer_info.peer_addr, msg.mac.data(), 6);
                     // Pobierz aktualny kanał WiFi
@@ -253,7 +253,7 @@ void BasicESPNowEx::process_send_queue() {
 	      if (result == ESP_OK) {
 	        msg.retry_count++;
 	        msg.timestamp = now;
-	        ESP_LOGE("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, ID %02X%02X%02X, attempt %d",
+	        ESP_LOGD("basic_espnowex", "Retransmit to %02X:%02X:%02X:%02X:%02X:%02X, ID %02X%02X%02X, attempt %d",
 	                 msg.mac[0], msg.mac[1], msg.mac[2], msg.mac[3], msg.mac[4], msg.mac[5], msg.message_id[0], msg.message_id[1], msg.message_id[2], msg.retry_count);
 	        }
 	      }
@@ -290,7 +290,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	            if (it != instance_->pending_messages_.end()) {
 			if (!it->acked){
 	                	it->acked = true;
-	                	ESP_LOGE("basic_espnowex", "ACK received for message %02X%02X%02X", ack_id[0], ack_id[1], ack_id[2]);
+	                	ESP_LOGD("basic_espnowex", "ACK received for message %02X%02X%02X", ack_id[0], ack_id[1], ack_id[2]);
 				should_handle_ack = true;
 	            	}
 		    }
@@ -361,7 +361,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	if (payload.size() == 4 && memcmp(payload.data(), payload.data() + 2, 2) == 0) {
 		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
 		this->on_recv_cmd_callback_.call(sender_mac, cmd);
-		ESP_LOGE("basic_espnowex", "CMD received for message...");
+		ESP_LOGD("basic_espnowex", "CMD received for message...");
 	}
 	
 	// 6. Przekazanie danych i wiadomości tekstowej
@@ -373,7 +373,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 }
 
 void BasicESPNowEx::send_cb(const uint8_t *mac, esp_now_send_status_t status) {
-  ESP_LOGE("basic_espnowex", "Send to %02X:%02X:%02X:%02X:%02X:%02X %s",
+  ESP_LOGD("basic_espnowex", "Send to %02X:%02X:%02X:%02X:%02X:%02X %s",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
            status == ESP_NOW_SEND_SUCCESS ? "succeeded" : "failed");
 }
