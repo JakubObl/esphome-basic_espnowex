@@ -379,7 +379,7 @@ void BasicESPNowEx::send_cb(const uint8_t *mac, esp_now_send_status_t status) {
 }
 
 
-
+/*
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
      parent->add_on_message_callback([this](const std::array<uint8_t, 6> mac, const std::string message) {
           trigger(mac, message);
@@ -402,6 +402,7 @@ OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
         trigger(mac, dt);
     });
 }
+*/
 void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
     //for (auto *trig : this->msg_triggers_) {
     //    trig->trigger(mac, msg);
