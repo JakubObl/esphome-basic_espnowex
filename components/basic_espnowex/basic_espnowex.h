@@ -29,27 +29,27 @@ struct PendingMessage {
 };
 struct ReceivedMessageInfo {
     std::array<uint8_t, 6> mac;
-    std::vector<uint8_t> data;
     int64_t timestamp;
+    std::vector<uint8_t> data;
 };
 
 class BasicESPNowEx;
 
 
 class OnMessageTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::string>, public Component {
- public:
+  public:
   explicit OnMessageTrigger(BasicESPNowEx *parent);
 };
 class OnRecvAckTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::array<uint8_t, 3>>, public Component {
-public:
+  public:
     explicit OnRecvAckTrigger(BasicESPNowEx *parent);
 };
 class OnRecvCmdTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, int16_t>, public Component {
-public:
+  public:
     explicit OnRecvCmdTrigger(BasicESPNowEx *parent);
 };
 class OnRecvDataTrigger : public ::esphome::Trigger<std::array<uint8_t, 6>, std::vector<uint8_t>>, public Component {
-public:
+  public:
     explicit OnRecvDataTrigger(BasicESPNowEx *parent);
 };
 
