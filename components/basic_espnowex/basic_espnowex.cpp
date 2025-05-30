@@ -403,29 +403,31 @@ OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
     });
 }
 void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
-    for (auto *trig : this->msg_triggers_) {
-        trig->trigger(mac, msg);
-    }
+    //for (auto *trig : this->msg_triggers_) {
+    //    trig->trigger(mac, msg);
+    //}
+    this->on_message_callback_.call(mac, msg);
 }
 void BasicESPNowEx::handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 3> &msg_id) {
-    for (auto *trig : this->ack_triggers_) {
-        trig->trigger(mac, msg_id);
-    }
+    //for (auto *trig : this->ack_triggers_) {
+    //   trig->trigger(mac, msg_id);
+    //}
+    this->on_recv_ack_callback_.call(mac, msg_id);
 }
 
 void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
-    for (auto *trig : this->cmd_triggers_) {
-        trig->trigger(mac, cmd);
-	    ESP_LOGE("basic_espnowex", "CMD trigger ...");
-    }
+    //for (auto *trig : this->cmd_triggers_) {
+    //    trig->trigger(mac, cmd);
+    //}
     this->on_recv_cmd_callback_.call(mac, cmd);
 }
 void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> &dt) {
-    for (auto *trig : this->data_triggers_) {
-        trig->trigger(mac, dt);
-    }
+    //for (auto *trig : this->data_triggers_) {
+    //    trig->trigger(mac, dt);
+    //}
     this->on_recv_data_callback_.call(mac, dt);
 }
+/*
 void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
   this->msg_triggers_.push_back(trigger);
 }
@@ -438,7 +440,7 @@ void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
 void BasicESPNowEx::add_on_recv_data_trigger(OnRecvDataTrigger *trigger) {
     this->data_triggers_.push_back(trigger);
 }
-
+*/
 BasicESPNowEx::~BasicESPNowEx() {
   esp_timer_stop(this->retry_timer_);
   esp_timer_delete(this->retry_timer_);
