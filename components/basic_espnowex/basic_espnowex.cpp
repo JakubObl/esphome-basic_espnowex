@@ -334,7 +334,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	
 		is_duplicate = std::any_of(history.begin(), history.end(),
 			[&](const ReceivedMessageInfo &info) {
-			eturn info.mac == sender_mac &&
+			return info.mac == sender_mac &&
 				info.data.size() == len &&
 				std::equal(info.data.begin(), info.data.end(), data);
 		});
