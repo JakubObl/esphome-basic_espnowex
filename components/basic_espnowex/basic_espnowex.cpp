@@ -61,7 +61,8 @@ void BasicESPNowEx::setup() {
   }
 	
   // 1) Utwórz semafor
-  //this->queue_mutex_ = xSemaphoreCreateMutex();
+  this->queue_mutex_ = xSemaphoreCreateMutex();
+  this->history_mutex_ = xSemaphoreCreateMutex();
 	
   // Konfiguracja timera do okresowej weryfikacji kolejki
   const esp_timer_create_args_t timer_args = {
@@ -101,7 +102,15 @@ void BasicESPNowEx::on_wifi_event(esp_event_base_t base, int32_t id, void* data)
     }
   }
 }
-
+void BasicESPNowEx::set_peer_mac(std::array<uint8_t, 6> mac) {
+  this->peer_mac_ = mac;
+}
+void BasicESPNowEx::set_max_retries(uint8_t max_retries_) {
+  this->max_retries = max_retries_;
+}
+void BasicESPNowEx::set_timeout_us(int64_t timeout_us_) {
+  this->timeout_us = timeout_us_*1000;
+}
 void BasicESPNowEx::send_broadcast(const std::vector<uint8_t> &msg) {
   uint8_t broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   esp_err_t result = esp_now_send(broadcast, msg.data(), msg.size());
@@ -137,7 +146,7 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
     msg[1] = static_cast<uint8_t>(cmd & 0xFF);
     msg[2] = msg[0];
     msg[3] = msg[1];
-//    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
         auto it = std::find_if(
             this->pending_messages_.begin(),
             this->pending_messages_.end(),
@@ -156,29 +165,32 @@ void BasicESPNowEx::send_espnow_cmd(int16_t cmd, const std::array<uint8_t, 6> &p
                 return std::equal(m.payload.begin() + 4, m.payload.begin() + 8, msg.begin());
             }
         );
-
+	bool should_send = false;
         if (it != this->pending_messages_.end()) {
             it->peer_add_attempts = 0;
             it->retry_count = 0;
             it->timestamp = esp_timer_get_time();
             // nie wysyłamy ponownie
         } else {
-            this->send_espnow(msg, peer_mac);
+            should_send = true;
         }
-  //      xSemaphoreGive(this->queue_mutex_);
-  //  }
+        xSemaphoreGive(this->queue_mutex_);
+	if (should_send) {
+    		this->send_espnow(msg, peer_mac);
+	}
+    }
 }
 
 void BasicESPNowEx::clear_pending_messages() {
-   // if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
         this->pending_messages_.clear(); // Usuwa wszystkie elementy z kolejki
-      //  xSemaphoreGive(this->queue_mutex_);
-   // }
+        xSemaphoreGive(this->queue_mutex_);
+    }
 }
 
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
   
- // if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+  if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
   
 	PendingMessage pending;
 	pending.mac = peer_mac;
@@ -187,7 +199,6 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
 	pending.retry_count = 0;
 	pending.timestamp = esp_timer_get_time();
 	pending.acked = false;
-	//pending.payload = msg;
 	// Dodanie nagłówka 0x00 + message_id
         pending.payload.reserve(4 + msg.size());
         pending.payload.push_back(0x00);
@@ -195,18 +206,16 @@ void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::arra
         pending.payload.insert(pending.payload.end(), msg.begin(), msg.end());
   
   	pending_messages_.push_back(pending);
-    	//xSemaphoreGive(this->queue_mutex_);
-  //}
-  //process_send_queue();
+    	xSemaphoreGive(this->queue_mutex_);
+  }
+  process_send_queue();
 }
 
 void BasicESPNowEx::process_send_queue() {
   const int64_t now = esp_timer_get_time();
-  //constexpr int64_t timeout_us = 200 * 1000; // 200ms
-  //constexpr uint8_t max_retries = 5;
 
   // Lock
- // if (xSemaphoreTake(this->queue_mutex_, 0) == pdTRUE) {
+  if (xSemaphoreTake(this->queue_mutex_, 0) == pdTRUE) {
 	  // Usuń potwierdzone lub przekroczone limity czasu
 	  this->pending_messages_.erase(
 	    std::remove_if(this->pending_messages_.begin(), this->pending_messages_.end(),
@@ -224,10 +233,9 @@ void BasicESPNowEx::process_send_queue() {
                     esp_now_peer_info_t peer_info = {};
                     memcpy(peer_info.peer_addr, msg.mac.data(), 6);
                     // Pobierz aktualny kanał WiFi
-                    uint8_t current_channel;
-                    esp_wifi_get_channel(&current_channel, nullptr);
+                    ///uint8_t current_channel;
+                    //esp_wifi_get_channel(&current_channel, nullptr);
                     peer_info.channel = 0; //current_channel;
-                    
                     peer_info.encrypt = false;
                     
                     esp_err_t add_status = esp_now_add_peer(&peer_info);
@@ -250,8 +258,8 @@ void BasicESPNowEx::process_send_queue() {
 	        }
 	      }
 	    }
-	//  xSemaphoreGive(this->queue_mutex_);
-  //}
+	  xSemaphoreGive(this->queue_mutex_);
+  }
 }
 
 std::array<uint8_t, 3> BasicESPNowEx::generate_message_id() {
@@ -264,49 +272,16 @@ std::array<uint8_t, 3> BasicESPNowEx::generate_message_id() {
     };
 }
 
-/*
-void BasicESPNowEx::send_espnow(const std::vector<uint8_t> &msg, const std::array<uint8_t, 6> &peer_mac) {
-
-    if (!esp_now_is_peer_exist(peer_mac.data())) {
-        esp_now_peer_info_t peer_info = {};
-        memcpy(peer_info.peer_addr, peer_mac.data(), 6);
-        peer_info.channel = 0;
-        peer_info.encrypt = false;
-        
-        esp_err_t status = esp_now_add_peer(&peer_info);
-        if (status != ESP_OK) {
-            ESP_LOGE("basic_espnowex", "Failed to add peer: %s", esp_err_to_name(status));
-            return;
-        }
-    }
-
-
-    esp_err_t result = esp_now_send(peer_mac.data(), msg.data(), msg.size());
-    if (result != ESP_OK) {
-        ESP_LOGE("basic_espnowex", "Send error: %s", esp_err_to_name(result));
-    }
-}
-*/
-
-void BasicESPNowEx::set_peer_mac(std::array<uint8_t, 6> mac) {
-  this->peer_mac_ = mac;
-}
-void BasicESPNowEx::set_max_retries(uint8_t max_retries_) {
-  this->max_retries = max_retries_;
-}
-void BasicESPNowEx::set_timeout_us(int64_t timeout_us_) {
-  this->timeout_us = timeout_us_*1000;
-}
-
 void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
-	if (!instance_) return;
+	if (!instance_ || !mac || !data || len < 1) return;
 	std::array<uint8_t, 6> sender_mac;
 	std::copy_n(mac, 6, sender_mac.begin());
 
 	// Obsługa ACK (4 bajty: 0x01 + message_id)
 	if (len == 4 && data[0] == 0x01) {
         	std::array<uint8_t, 3> ack_id{data[1], data[2], data[3]};
-        	//if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+		bool should_handle_ack = false;
+        	if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
             		auto it = std::find_if(instance_->pending_messages_.begin(), instance_->pending_messages_.end(),
 	                [&](const PendingMessage& m) {
 	                    return memcmp(m.mac.data(), sender_mac.data(), 6) == 0 &&
@@ -316,11 +291,14 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 			if (!it->acked){
 	                	it->acked = true;
 	                	ESP_LOGD("basic_espnowex", "ACK received for message %02X%02X%02X", ack_id[0], ack_id[1], ack_id[2]);
-				instance_->handle_ack(sender_mac, ack_id);
+				should_handle_ack = true;
 	            	}
 		    }
-	          //  xSemaphoreGive(instance_->queue_mutex_);
-        	//}
+	            xSemaphoreGive(instance_->queue_mutex_);
+        	}
+		if (should_handle_ack) {
+    			instance_->handle_ack(sender_mac, ack_id);
+		}
         	return;
     	}
 	// Walidacja podstawowej wiadomości
@@ -330,8 +308,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	}	
 	// Wysyłanie ACK
 	std::array<uint8_t, 3> msg_id{data[1], data[2], data[3]};
-	std::vector<uint8_t> ack_packet{0x01};
-	ack_packet.insert(ack_packet.end(), msg_id.begin(), msg_id.end()); 
+	std::vector<uint8_t> ack_packet{0x01, msg_id[0], msg_id[1], msg_id[2]};
 	if (!esp_now_is_peer_exist(sender_mac.data())) {
 		esp_now_peer_info_t peer_info = {};
 		memcpy(peer_info.peer_addr, sender_mac.data(), 6);
@@ -342,43 +319,40 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	esp_now_send(sender_mac.data(), ack_packet.data(), ack_packet.size());
 
 	int64_t now = esp_timer_get_time();
-
+	bool is_duplicate = false;
 	// Mutex chroniący dostęp do historii
-	//if (xSemaphoreTake(instance_->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+	if (xSemaphoreTake(instance_->history_mutex_, portMAX_DELAY) == pdTRUE) {
 		// Usuń stare wpisy (>300s)
-	        instance_->received_history_.erase(
-	            std::remove_if(
-	                instance_->received_history_.begin(),
-	                instance_->received_history_.end(),
-	                [now](const ReceivedMessageInfo& info) {
-	                    return (now - info.timestamp) > 300000000; // 300s w mikrosekundach
-	                }
-	            ),
-	            instance_->received_history_.end()
-		);
+		auto &history = instance_->received_history_;
+		
+		history.erase(
+			std::remove_if(history.begin(), history.end(),
+			[now](const ReceivedMessageInfo &info) {
+		          return (now - info.timestamp) > 300'000'000; // 300s
+			}),
+		      history.end());
 	
-	        // Szukaj duplikatu
-	        auto it = std::find_if(
-	            instance_->received_history_.begin(),
-	            instance_->received_history_.end(),
-	            [&](const ReceivedMessageInfo& info) {
-	                return info.mac == sender_mac && info.data.size() == len && std::equal(info.data.begin(), info.data.end(), data);
-	            }
-	        );
+		is_duplicate = std::any_of(history.begin(), history.end(),
+			[&](const ReceivedMessageInfo &info) {
+			eturn info.mac == sender_mac &&
+				info.data.size() == len &&
+				std::equal(info.data.begin(), info.data.end(), data);
+		});
 	
-	        if (it != instance_->received_history_.end()) {
-	            // Duplikat – nie przetwarzaj dalej
-	          //  xSemaphoreGive(instance_->queue_mutex_);
-	            return;
-	        }
-		constexpr size_t MAX_HISTORY_SIZE = 1000; // lub inna wybrana wartość
-		if (instance_->received_history_.size() >= MAX_HISTORY_SIZE) {
-		    instance_->received_history_.erase(instance_->received_history_.begin()); // usuń najstarszy
+		if (!is_duplicate) {
+			constexpr size_t MAX_HISTORY_SIZE = 1000;
+			if (history.size() >= MAX_HISTORY_SIZE) {
+				history.erase(history.begin());
+			}
+			history.push_back({sender_mac, now, std::vector<uint8_t>(data, data + len)});
 		}
-	        // Unikalna wiadomość – zapisz do historii
-	        instance_->received_history_.push_back({sender_mac, std::vector<uint8_t>(data, data + len), now});
-	  //      xSemaphoreGive(instance_->queue_mutex_);
-	//}
+	
+		xSemaphoreGive(instance_->history_mutex_);
+	}
+	
+	if (is_duplicate) {
+		return;
+	}
 
 	// 4. Przetwarzanie payloadu po usunięciu nagłówka
 	 std::vector<uint8_t> payload(data + 4, data + len);
@@ -397,21 +371,13 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	}
 }
 
-void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
-    for (auto *trig : this->msg_triggers_) {
-        trig->trigger(mac, msg);
-    }
-}
-
 void BasicESPNowEx::send_cb(const uint8_t *mac, esp_now_send_status_t status) {
   ESP_LOGD("basic_espnowex", "Send to %02X:%02X:%02X:%02X:%02X:%02X %s",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
            status == ESP_NOW_SEND_SUCCESS ? "succeeded" : "failed");
 }
 
-void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
-  this->msg_triggers_.push_back(trigger);
-}
+
 
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
      parent->add_on_message_callback([this](const std::array<uint8_t, 6> mac, const std::string message) {
@@ -435,16 +401,17 @@ OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
         trigger(mac, dt);
     });
 }
-
+void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
+    for (auto *trig : this->msg_triggers_) {
+        trig->trigger(mac, msg);
+    }
+}
 void BasicESPNowEx::handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 3> &msg_id) {
     for (auto *trig : this->ack_triggers_) {
         trig->trigger(mac, msg_id);
     }
 }
 
-void BasicESPNowEx::add_on_recv_ack_trigger(OnRecvAckTrigger *trigger) {
-    this->ack_triggers_.push_back(trigger);
-}
 void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
     for (auto *trig : this->cmd_triggers_) {
         trig->trigger(mac, cmd);
@@ -457,7 +424,12 @@ void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t
     }
     this->on_recv_data_callback_.call(mac, dt);
 }
-
+void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
+  this->msg_triggers_.push_back(trigger);
+}
+void BasicESPNowEx::add_on_recv_ack_trigger(OnRecvAckTrigger *trigger) {
+    this->ack_triggers_.push_back(trigger);
+}
 void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
     this->cmd_triggers_.push_back(trigger);
 }
@@ -469,7 +441,8 @@ BasicESPNowEx::~BasicESPNowEx() {
   esp_timer_stop(this->retry_timer_);
   esp_timer_delete(this->retry_timer_);
   // Usuń semafor
- // vSemaphoreDelete(this->queue_mutex_);
+  vSemaphoreDelete(this->queue_mutex_);
+  vSemaphoreDelete(this->history_mutex_);
 }
 
 }  // namespace espnow
