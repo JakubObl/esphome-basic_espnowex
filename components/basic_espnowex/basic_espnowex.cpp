@@ -328,7 +328,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 		history.erase(
 			std::remove_if(history.begin(), history.end(),
 			[now](const ReceivedMessageInfo &info) {
-		          return (now - info.timestamp) > 300'000'000; // 300s
+		          return (now - info.timestamp) > 300000000; // 300s
 			}),
 		      history.end());
 	
