@@ -20,7 +20,7 @@ Komponent prowadzi historię odebranych wiadomości przez okres 300 sekund, co u
 
 ```yaml
 external_components:
-  - source: github://twoja-organizacja/basicespnowex
+  - source: github://JakubObl/esphome-basic_espnowex
 
 esphome:
   name: esp-device
