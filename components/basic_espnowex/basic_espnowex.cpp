@@ -297,7 +297,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	            xSemaphoreGive(instance_->queue_mutex_);
         	}
 		if (should_handle_ack) {
-    			instance_->handle_ack(sender_mac, ack_id);
+    			this->on_recv_ack_callback_.call(sender_mac, ack_id);
 		}
         	return;
     	}
@@ -360,15 +360,15 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	// 5. Dekodowanie komendy (jeśli payload ma dokładnie 4 bajty i pierwszy dwój jest taki sam jak ostatni dwój)
 	if (payload.size() == 4 && memcmp(payload.data(), payload.data() + 2, 2) == 0) {
 		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
-		instance_->handle_cmd(sender_mac, cmd);
+		this->on_recv_cmd_callback_.call(sender_mac, cmd);
 		ESP_LOGE("basic_espnowex", "CMD received for message...");
 	}
 	
 	// 6. Przekazanie danych i wiadomości tekstowej
-	instance_->handle_data(sender_mac, payload);  
+	this->on_recv_data_callback_.call(sender_mac, payload);  
 	if (!payload.empty()) {
 		std::string msg(payload.begin(), payload.end());
-		instance_->handle_msg(sender_mac, msg);
+		this->on_message_callback_.call(sender_mac, msg);
 	}
 }
 
@@ -402,7 +402,7 @@ OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
         trigger(mac, dt);
     });
 }
-
+/*
 void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
     //for (auto *trig : this->msg_triggers_) {
     //    trig->trigger(mac, msg);
@@ -427,19 +427,6 @@ void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t
     //    trig->trigger(mac, dt);
     //}
     this->on_recv_data_callback_.call(mac, dt);
-}
-/*
-void BasicESPNowEx::add_on_message_trigger(OnMessageTrigger *trigger) {
-  this->msg_triggers_.push_back(trigger);
-}
-void BasicESPNowEx::add_on_recv_ack_trigger(OnRecvAckTrigger *trigger) {
-    this->ack_triggers_.push_back(trigger);
-}
-void BasicESPNowEx::add_on_recv_cmd_trigger(OnRecvCmdTrigger *trigger) {
-    this->cmd_triggers_.push_back(trigger);
-}
-void BasicESPNowEx::add_on_recv_data_trigger(OnRecvDataTrigger *trigger) {
-    this->data_triggers_.push_back(trigger);
 }
 */
 BasicESPNowEx::~BasicESPNowEx() {
