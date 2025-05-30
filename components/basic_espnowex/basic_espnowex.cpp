@@ -74,7 +74,7 @@ void BasicESPNowEx::setup() {
   };
   
   ESP_ERROR_CHECK(esp_timer_create(&timer_args, &this->retry_timer_));
-  ESP_ERROR_CHECK(esp_timer_start_periodic(this->retry_timer_, 100000)); // 100ms
+  ESP_ERROR_CHECK(esp_timer_start_periodic(this->retry_timer_, 400000)); // 100ms
 
   ESP_LOGI("basic_espnowex", "ESP-NOW initialized");
 }
