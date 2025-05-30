@@ -10,6 +10,12 @@ cg.std_array = std_array
 basic_espnowex_ns = cg.esphome_ns.namespace("espnow")
 BasicESPNowEx = basic_espnowex_ns.class_("BasicESPNowEx", cg.Component)
 
+RecvCmdTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16)
+RecvAckTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3))
+RecvDataTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_vector.template(cg.uint8))
+MessageTrigger = automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string)
+
+
 #OnMessageTrigger = basic_espnowex_ns.class_(
 #    "OnMessageTrigger", 
 #    automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string),
@@ -46,27 +52,16 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Optional(CONF_MAX_RETRIES): cv.positive_int,
     cv.Optional(CONF_TIMEOUT_US): cv.positive_int,
     cv.Optional(CONF_ON_MESSAGE): automation.validate_automation({
-        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-            automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string)
-        )
+        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(MessageTrigger)
     }),
-
     cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation({
-        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-            automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3))
-        )
+        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(RecvAckTrigger)
     }),
-
     cv.Optional(CONF_ON_RECV_CMD): automation.validate_automation({
-        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-            automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.int16)
-        )
+        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(RecvCmdTrigger)
     }),
-
     cv.Optional(CONF_ON_RECV_DATA): automation.validate_automation({
-        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-            automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_vector.template(cg.uint8))
-        )
+        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(RecvDataTrigger)
     }),
     #cv.Optional(CONF_ON_MESSAGE): automation.validate_automation(automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_string)),
     #cv.Optional(CONF_ON_RECV_ACK): automation.validate_automation(automation.Trigger.template(cg.std_array.template(cg.uint8, 6), cg.std_array.template(cg.uint8, 3))),
