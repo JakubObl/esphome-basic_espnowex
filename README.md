@@ -17,7 +17,7 @@ The component maintains a 300-second received message history, enabling duplicat
 ### Basic Setup
 ```yaml
 external_components:
-  - source: github://your-organization/basicespnowex
+  - source: github://JakubObl/esphome-basic_espnowex
 
 esphome:
   name: esp-device
