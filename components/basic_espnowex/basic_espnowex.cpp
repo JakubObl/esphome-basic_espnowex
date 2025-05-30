@@ -378,20 +378,16 @@ void BasicESPNowEx::send_cb(const uint8_t *mac, esp_now_send_status_t status) {
            status == ESP_NOW_SEND_SUCCESS ? "succeeded" : "failed");
 }
 
-
-
 OnMessageTrigger::OnMessageTrigger(BasicESPNowEx *parent) {
      parent->add_on_message_callback([this](const std::array<uint8_t, 6> mac, const std::string message) {
           trigger(mac, message);
       });
 }
-
 OnRecvAckTrigger::OnRecvAckTrigger(BasicESPNowEx *parent) {
     parent->add_on_recv_ack_callback([this](const std::array<uint8_t, 6> mac, std::array<uint8_t, 3> msg_id) {
          trigger(mac, msg_id);
     });
 }
-
 OnRecvCmdTrigger::OnRecvCmdTrigger(BasicESPNowEx *parent) {
     parent->add_on_recv_cmd_callback([this](const std::array<uint8_t, 6> mac, const int16_t cmd) {
         trigger(mac, cmd);
@@ -402,33 +398,7 @@ OnRecvDataTrigger::OnRecvDataTrigger(BasicESPNowEx *parent) {
         trigger(mac, dt);
     });
 }
-/*
-void BasicESPNowEx::handle_msg(std::array<uint8_t, 6> &mac, std::string &msg) {
-    //for (auto *trig : this->msg_triggers_) {
-    //    trig->trigger(mac, msg);
-    //}
-    this->on_message_callback_.call(mac, msg);
-}
-void BasicESPNowEx::handle_ack(std::array<uint8_t, 6> &mac, std::array<uint8_t, 3> &msg_id) {
-    //for (auto *trig : this->ack_triggers_) {
-    //   trig->trigger(mac, msg_id);
-    //}
-    this->on_recv_ack_callback_.call(mac, msg_id);
-}
 
-void BasicESPNowEx::handle_cmd(std::array<uint8_t, 6> &mac, int16_t cmd) {
-    //for (auto *trig : this->cmd_triggers_) {
-    //    trig->trigger(mac, cmd);
-    //}
-    this->on_recv_cmd_callback_.call(mac, cmd);
-}
-void BasicESPNowEx::handle_data(std::array<uint8_t, 6> &mac, std::vector<uint8_t> &dt) {
-    //for (auto *trig : this->data_triggers_) {
-    //    trig->trigger(mac, dt);
-    //}
-    this->on_recv_data_callback_.call(mac, dt);
-}
-*/
 BasicESPNowEx::~BasicESPNowEx() {
   esp_timer_stop(this->retry_timer_);
   esp_timer_delete(this->retry_timer_);
