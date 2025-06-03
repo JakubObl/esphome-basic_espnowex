@@ -306,7 +306,7 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	            xSemaphoreGive(instance_->queue_mutex_);
         	}
 		if (should_handle_ack) {
-    			this->on_recv_ack_callback_.call(sender_mac, ack_id);
+    			instance_->on_recv_ack_callback_.call(sender_mac, ack_id);
 		}
         	return;
     	}
@@ -369,15 +369,15 @@ void BasicESPNowEx::recv_cb(const uint8_t *mac, const uint8_t *data, int len) {
 	// 5. Dekodowanie komendy (jeśli payload ma dokładnie 4 bajty i pierwszy dwój jest taki sam jak ostatni dwój)
 	if (payload.size() == 4 && memcmp(payload.data(), payload.data() + 2, 2) == 0) {
 		int16_t cmd = (payload[0] << 8) | payload[1]; // Big-endian
-		this->on_recv_cmd_callback_.call(sender_mac, cmd);
+		instance_->on_recv_cmd_callback_.call(sender_mac, cmd);
 		ESP_LOGD("basic_espnowex", "CMD received for message...");
 	}
 	
 	// 6. Przekazanie danych i wiadomości tekstowej
-	this->on_recv_data_callback_.call(sender_mac, payload);  
+	instance_->on_recv_data_callback_.call(sender_mac, payload);  
 	if (!payload.empty()) {
 		std::string msg(payload.begin(), payload.end());
-		this->on_message_callback_.call(sender_mac, msg);
+		instance_->on_message_callback_.call(sender_mac, msg);
 	}
 }
 
