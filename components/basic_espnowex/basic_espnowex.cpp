@@ -188,6 +188,15 @@ void BasicESPNowEx::clear_pending_messages() {
     }
 }
 
+size_t BasicESPNowEx::get_pending_count() {
+    size_t count = 0;
+    if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
+        count = this->pending_messages_.size();
+        xSemaphoreGive(this->queue_mutex_);
+    }
+    return count;
+}
+
 void BasicESPNowEx::send_espnow(const std::vector<uint8_t>& msg, const std::array<uint8_t, 6>& peer_mac) {
   
   if (xSemaphoreTake(this->queue_mutex_, portMAX_DELAY) == pdTRUE) {
